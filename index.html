@@ -836,6 +836,17 @@
                 onsubmit="handleFormSubmit(event)">
                 <input type="hidden" id="f-id"> <!-- Row Index -->
 
+                <!-- Auto-fill Button -->
+                <div style="margin-bottom: 20px; text-align: center;">
+                    <input type="file" id="ai-upload" accept="image/*" style="display:none"
+                        onchange="handleImageUpload(this)">
+                    <button type="button" id="rescanBtn" class="secondary-btn"
+                        style="width: 100%; background: #e3f2fd; color: #1565c0; border: 1px dashed #1565c0;"
+                        onclick="document.getElementById('ai-upload').click()">
+                        <i class="fas fa-magic"></i> อัปโหลดรูปเพื่อกรอกข้อมูลอัตโนมัติ (AI)
+                    </button>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">ชื่อโครงการ *</label>
                     <input type="text" id="f-title" class="form-input" required>
@@ -961,7 +972,66 @@
 
     <script>
         // --- 1. CONFIGURATION ---
-        const API_URL = 'https://script.google.com/macros/s/AKfycbynvw6rn1Ek2bMvo9yc2hCpSrrMaS-0aMQs1m4erxm41GO8jKoiDRq8HQQIbuquqsWM/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbxrGmxhdw-Mah8onybdIAYHyWHYsZ0h6wpscQTHAlSp4Fpeado2oQk9G2QceLi9Sl-X/exec';
+
+        // --- NEW: Handle Image Upload ---
+        async function handleImageUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const btn = document.getElementById('rescanBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังวิเคราะห์...';
+            btn.disabled = true;
+
+            const reader = new FileReader();
+            reader.onload = async function (e) {
+                const base64 = e.target.result;
+                try {
+                    // Send to GAS
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'parse_image', image: base64 })
+                    });
+                    const result = await response.json();
+
+                    if (result.status === 'success' && result.data) {
+                        const d = result.data;
+                        // Map fields
+                        const setVal = (id, val) => { if (document.getElementById(id)) document.getElementById(id).value = val || ""; };
+
+                        setVal('f-title', d.title);
+                        setVal('f-desc', d.desc);
+                        setVal('f-budget', d.budget);
+                        setVal('f-order-no', d.orderNo);
+                        setVal('f-order-date', d.orderDate);
+                        setVal('f-contract-no', d.contractNo);
+                        setVal('f-sign-date', d.signDate);
+                        setVal('f-end', d.end);
+                        setVal('f-duration', d.duration);
+                        setVal('f-start', d.start);
+                        setVal('f-delivery-date', d.deliveryDate);
+                        setVal('f-inspection-date', d.inspectionDate);
+                        setVal('f-contractor', d.contractor);
+                        setVal('f-supervisor', d.supervisor);
+                        setVal('f-comm1', d.comm1);
+                        setVal('f-comm2', d.comm2);
+                        setVal('f-comm3', d.comm3); // Ensure comma handled if array? Gemini returns string usually.
+
+                        alert('✨ วิเคราะห์ข้อมูลเรียบร้อย! กรุณาตรวจสอบความถูกต้องก่อนบันทึก');
+                    } else {
+                        throw new Error(result.message || "Unknown error");
+                    }
+                } catch (err) {
+                    alert('เกิดข้อผิดพลาดในการวิเคราะห์รูป: ' + err.message);
+                } finally {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    input.value = ""; // Reset
+                }
+            };
+            reader.readAsDataURL(file);
+        }
 
         // MAPPING: Must match Google Sheet Headers (Row 1) EXACTLY!
         // Now using English Headers per request
