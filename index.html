@@ -1302,7 +1302,9 @@
             // Use signDate (Contract Sign Date) now
             const progress = calculateProgress(p.signDate, p.end, p.statusText);
             document.getElementById('m-percent').innerText = progress + "%";
-            document.getElementById('m-progress').style.width = progress + "%";
+            const mParams = document.getElementById('m-progress');
+            mParams.style.width = progress + "%";
+            mParams.style.background = p.status === 'active' ? 'var(--md-sys-color-secondary)' : 'var(--md-sys-color-primary)';
 
             // Handle Edit Button in Modal
             const editBtn = document.getElementById('m-edit-btn');
