@@ -963,8 +963,31 @@
         // --- 1. CONFIGURATION ---
         const API_URL = 'https://script.google.com/macros/s/AKfycbyiUz1MgQBYsQ4Vt8wBRFbGWAGlFzHB0srOuZ2hD2nm0q6LZf9pVC0Rxm4epFdU8QPU/exec';
 
+        // MAPPING: Ensure these match your Google Sheet Headers (Row 1) EXACTLY!
+        const COLUMN_MAP = {
+            title: "ชื่อโครงการ",
+            desc: "รายละเอียด/ปริมาณงาน",
+            budget: "งบประมาณ",
+            orderNo: "เลขที่คำสั่ง",
+            orderDate: "วันที่ลงนาม (คำสั่ง)",
+            contractNo: "เลขที่สัญญา",
+            signDate: "วันที่ลงนาม (สัญญา)",
+            end: "สิ้นสุดสัญญา",
+            duration: "ระยะเวลา",
+            start: "วันที่แจ้งเข้างาน",
+            deliveryDate: "วันที่ส่งมอบงาน",
+            inspectionDate: "วันที่ตรวจรับ",
+            contractor: "ผู้รับจ้าง",
+            supervisor: "ผู้ควบคุมงาน",
+            comm1: "คณะกรรมการ (คนที่ 1)",
+            comm2: "คณะกรรมการ (คนที่ 2)",
+            comm3: "คณะกรรมการ (คนที่ 3)",
+            status: "สถานะ",
+            budgetSource: "แหล่งเงินงบประมาณ",
+            boqLink: "ลิงก์ไฟล์ BOQ"
+        };
+
         let projects = [];
-        let rawData = []; // Store raw rows for editing with original index
         let searchTerm = "";
         let currentFilterType = 'active';
 
@@ -973,77 +996,62 @@
             try {
                 document.getElementById('loader').style.display = 'flex';
 
-                // Fetch JSON from Google Apps Script (Add timestamp to prevent caching)
                 const response = await fetch(API_URL + '?t=' + new Date().getTime());
                 const result = await response.json();
 
                 let rows = [];
                 if (result.status && result.status !== 'success' && !result.projects) throw new Error(result.message);
 
-                // Handle new format { projects: [], options: {} } or old format []
                 if (result.projects) {
                     rows = result.projects;
                     if (result.options) populateDatalists(result.options, result.projects);
-                } else {
-                    if (Array.isArray(result)) {
-                        rows = result; // Old format fallback
-                    } else if (result.data) {
-                        rows = result.data; // Wrapper fallback
-                    }
                 }
 
-                rawData = rows; // Store raw rows
+                // Map Data Objects (Using COLUMN_MAP keys)
+                projects = rows.map((r, index) => {
+                    // r is now an object { "ชื่อโครงการ": "...", ... }
+                    // We map it to our internal structure
 
-                // Map Data to Objects
-                projects = rows.map((row, index) => {
-                    // Handle if row is an object {id, data} (Old compatibility) or just an array
-                    const r = row.data ? row.data : row;
-                    const id = row.id !== undefined ? row.id : index;
+                    // Fallback for ID: usage _rowIndex from server if available, else index
+                    const id = r._rowIndex ? r._rowIndex : (r.id !== undefined ? r.id : index);
 
-                    let rawStatus = r[17] || "";
+                    let rawStatus = r[COLUMN_MAP.status] || "";
                     let isDone = rawStatus.includes('100') || rawStatus.includes('เสร็จ') || rawStatus.includes('ส่งมอบ');
 
                     return {
                         id: id,
-                        title: r[0],
-                        desc: r[1] || "",
-                        budget: parseInt((r[2] || "0").toString().replace(/,/g, '')),
-                        orderNo: String(r[3] || "-"), // Force String, no date conversion
-                        orderDate: convertDate(r[4]),
-                        contractNo: String(r[5] || "-"), // Force String, no date conversion
-                        signDate: convertDate(r[6]),
-                        start: convertDate(r[9]),
-                        end: convertDate(r[7]),
-                        deliveryDate: convertDate(r[10]),
-                        duration: r[8],
-                        inspectionDate: convertDate(r[11]),
-                        contractor: r[12] || "-",
-                        supervisor: r[13],
-                        committee: [r[14], r[15], r[16]].filter(Boolean),
+                        title: r[COLUMN_MAP.title] || "",
+                        desc: r[COLUMN_MAP.desc] || "",
+                        budget: parseInt((r[COLUMN_MAP.budget] || "0").toString().replace(/,/g, '')),
+                        orderNo: String(r[COLUMN_MAP.orderNo] || "-"),
+                        orderDate: convertDate(r[COLUMN_MAP.orderDate]),
+                        contractNo: String(r[COLUMN_MAP.contractNo] || "-"),
+                        signDate: convertDate(r[COLUMN_MAP.signDate]),
+                        start: convertDate(r[COLUMN_MAP.start]),
+                        end: convertDate(r[COLUMN_MAP.end]),
+                        deliveryDate: convertDate(r[COLUMN_MAP.deliveryDate]),
+                        duration: r[COLUMN_MAP.duration] || "-",
+                        inspectionDate: convertDate(r[COLUMN_MAP.inspectionDate]),
+                        contractor: r[COLUMN_MAP.contractor] || "-",
+                        supervisor: r[COLUMN_MAP.supervisor] || "-",
+                        committee: [r[COLUMN_MAP.comm1], r[COLUMN_MAP.comm2], r[COLUMN_MAP.comm3]].filter(Boolean),
                         status: isDone ? 'done' : 'active',
                         statusText: rawStatus || (isDone ? "เสร็จสิ้น" : "กำลังดำเนินการ"),
-                        budgetSource: r[18] || "",
-                        boqLink: r[19] || "",
-                        rawRow: r // Keep original for filling form
+                        budgetSource: r[COLUMN_MAP.budgetSource] || "",
+                        boqLink: r[COLUMN_MAP.boqLink] || "",
+                        rawObj: r // Keep original object for editing
                     };
                 });
 
-                // Sort: 
-                // 1. "กำลังดำเนินการ" First
-                // 2. Sign Date Descending
-                // 3. ID Descending
+                // Sort: "กำลังดำเนินการ" First, then Sign Date Desc
                 projects.sort((a, b) => {
                     const scoreA = a.statusText === 'กำลังดำเนินการ' ? 1 : 0;
                     const scoreB = b.statusText === 'กำลังดำเนินการ' ? 1 : 0;
-
-                    if (scoreA !== scoreB) return scoreB - scoreA; // 1 before 0
-
-                    // If same score (both In Progress or both Pending)
+                    if (scoreA !== scoreB) return scoreB - scoreA;
                     const dateA = a.signDate || "";
                     const dateB = b.signDate || "";
-                    if (dateA > dateB) return -1; // Newest first
+                    if (dateA > dateB) return -1;
                     if (dateA < dateB) return 1;
-
                     return b.id - a.id;
                 });
 
@@ -1057,7 +1065,16 @@
             }
         }
 
-        // --- 3. RENDERING ---
+        // --- 3. RENDERING --- (Unchanged, skipping re-definition for brevity if possible, but replace_file needs contiguous)
+        // ... (Since I am replacing a block, I must include renderProjects if it falls in range)
+        // Wait, the tool requires me to replace the EXACT block. 
+        // I will target from `// --- 1. CONFIGURATION ---` down to `deleteProject` end or similar.
+        // Let's stick to replacing `init` and `handleFormSubmit` and `deleteProject`.
+
+        // RE-INSERTING renderProjects for safety as it is in the middle of the chunk? 
+        // No, renderProjects is lines 1061-1109. My EndLine is 1203.
+        // I need to include renderProjects in the replacement content to keep it.
+
         function renderProjects(filterType) {
             currentFilterType = filterType;
             const list = document.getElementById('projectList');
@@ -1073,17 +1090,15 @@
                 if (filterType === 'active' && p.status !== 'active') return;
                 if (searchTerm !== "" && !p.title.toLowerCase().includes(searchTerm)) return;
 
-                // Pass statusText and signDate (Contract Sign Date) instead of Work Start Date
                 const progress = calculateProgress(p.signDate, p.end, p.statusText);
 
                 const html = `
-        <div class="project-card ${p.status === 'active' ? 'status-active' : 'status-done'}" onclick="openModal(${p.id})">
-            
+        <div class="project-card ${p.status === 'active' ? 'status-active' : 'status-done'}" onclick="openModal('${p.id}')">
             <div class="card-header">
                 <div class="card-title">${p.title}</div>
                 <div class="header-actions">
-                    <button class="admin-icon-btn edit-action" onclick="openFormModal('edit', ${p.id}); event.stopPropagation();">edit</button>
-                    <button class="admin-icon-btn delete-action" onclick="deleteProject(${p.id}); event.stopPropagation();">delete</button>
+                    <button class="admin-icon-btn edit-action" onclick="openFormModal('edit', '${p.id}'); event.stopPropagation();">edit</button>
+                    <button class="admin-icon-btn delete-action" onclick="deleteProject('${p.id}'); event.stopPropagation();">delete</button>
                     <span class="status-badge ${p.statusText === 'รอดำเนินการ' ? 'badge-pending' : (p.status === 'active' ? 'badge-active' : 'badge-done')}">${p.statusText}</span>
                 </div>
             </div>
@@ -1118,46 +1133,40 @@
             const id = document.getElementById('f-id').value;
             const isEdit = id !== "";
 
-            // Construct Data Array (Must match Sheet Column Order 0-17)
-            // Default empty strings for unused fields in this simple form
-            const newData = new Array(18).fill("");
+            // Construct Data Object using COLUMN_MAP keys
+            const newData = {};
 
-            newData[0] = document.getElementById('f-title').value;
-            newData[1] = document.getElementById('f-desc').value;
-            newData[2] = document.getElementById('f-budget').value;
+            newData[COLUMN_MAP.title] = document.getElementById('f-title').value;
+            newData[COLUMN_MAP.desc] = document.getElementById('f-desc').value;
+            newData[COLUMN_MAP.budget] = document.getElementById('f-budget').value;
 
-            newData[3] = document.getElementById('f-order-no').value;
-            newData[4] = formatDateForSheet(document.getElementById('f-order-date').value);
+            newData[COLUMN_MAP.orderNo] = document.getElementById('f-order-no').value;
+            newData[COLUMN_MAP.orderDate] = formatDateForSheet(document.getElementById('f-order-date').value);
 
-            newData[5] = document.getElementById('f-contract-no').value;
-            newData[6] = formatDateForSheet(document.getElementById('f-sign-date').value);
+            newData[COLUMN_MAP.contractNo] = document.getElementById('f-contract-no').value;
+            newData[COLUMN_MAP.signDate] = formatDateForSheet(document.getElementById('f-sign-date').value);
+            newData[COLUMN_MAP.end] = formatDateForSheet(document.getElementById('f-end').value);
+            newData[COLUMN_MAP.duration] = document.getElementById('f-duration').value;
 
-            newData[7] = formatDateForSheet(document.getElementById('f-end').value); // Col H (End Contract)
-            newData[8] = document.getElementById('f-duration').value;
+            newData[COLUMN_MAP.start] = formatDateForSheet(document.getElementById('f-start').value);
+            newData[COLUMN_MAP.deliveryDate] = formatDateForSheet(document.getElementById('f-delivery-date').value);
+            newData[COLUMN_MAP.inspectionDate] = formatDateForSheet(document.getElementById('f-inspection-date').value);
 
-            newData[9] = formatDateForSheet(document.getElementById('f-start').value); // Col J (Start Work)
-            newData[10] = formatDateForSheet(document.getElementById('f-delivery-date').value);
-            newData[11] = formatDateForSheet(document.getElementById('f-inspection-date').value);
+            newData[COLUMN_MAP.contractor] = document.getElementById('f-contractor').value;
+            newData[COLUMN_MAP.supervisor] = document.getElementById('f-supervisor').value;
 
-            newData[12] = document.getElementById('f-contractor').value;
-            newData[13] = document.getElementById('f-supervisor').value;
+            newData[COLUMN_MAP.comm1] = document.getElementById('f-comm1').value;
+            newData[COLUMN_MAP.comm2] = document.getElementById('f-comm2').value;
+            newData[COLUMN_MAP.comm3] = document.getElementById('f-comm3').value;
 
-            newData[14] = document.getElementById('f-comm1').value;
-            newData[15] = document.getElementById('f-comm2').value;
-            newData[16] = document.getElementById('f-comm3').value;
+            newData[COLUMN_MAP.status] = document.getElementById('f-status').value;
+            newData[COLUMN_MAP.budgetSource] = document.getElementById('f-budget-source').value;
+            newData[COLUMN_MAP.boqLink] = document.getElementById('f-boq-link').value;
 
-            newData[17] = document.getElementById('f-status').value;
-            newData[18] = document.getElementById('f-budget-source').value;
-            newData[19] = document.getElementById('f-boq-link').value; // Col 19
-
-            // Preserve other fields if editing (redundant now if we map all, but good for safety)
-            if (isEdit) {
-                // Since we map everything now, this might just be preserving unknown future cols
-                const original = projects.find(p => p.id == id).rawRow;
-                for (let i = 0; i < original.length; i++) {
-                    if (newData[i] === undefined && original[i]) newData[i] = original[i];
-                }
-            }
+            // Preserve other fields if editing? Not easy with Object mapping unless we merge.
+            // But since we write by *Keys*, we don't need to preserve unknowns (they won't be touched by the partial update in doPost).
+            // However, our new doPost for Update iterates `dataObj` and updates those columns. 
+            // So we just send what we have. Safest.
 
             const payload = {
                 action: isEdit ? 'update' : 'create',
@@ -1165,13 +1174,10 @@
                 data: newData
             };
 
-            // Send to WAS using no-cors (Note: we can't read response in no-cors easily, 
-            // but standard fetch works with GAS if we handle redirects, let's try standard)
             try {
                 await fetch(API_URL, {
                     method: 'POST',
                     body: JSON.stringify(payload)
-                    // mode: 'no-cors' // Use standard mode for JSON response
                 });
 
                 alert('บันทึกสำเร็จ');
