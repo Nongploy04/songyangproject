@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ติดตามโครงการ กองช่าง อบต.สงยาง</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        :root {
+            /* Google Material 3 Token-like variables */
+            --md-sys-color-primary: #2e7d32;
+            --md-sys-color-on-primary: #ffffff;
+            --md-sys-color-primary-container: #b8f2c8;
+            --md-sys-color-secondary: #e65100;
+            /* Adjusted Orange */
+            --md-sys-color-background: #fdfcff;
+            --md-sys-color-surface: #f0f2f5;
+            --md-sys-color-surface-container: #ffffff;
+            --md-sys-color-outline: #79747e;
+            --md-sys-color-error: #ba1a1a;
+
+            --border-radius-xl: 28px;
+            --border-radius-lg: 16px;
+            --border-radius-md: 12px;
+
+            --animation-timing: cubic-bezier(0.2, 0.0, 0, 1.0);
+        }
+
+        body {
+            font-family: 'Sarabun', sans-serif;
+            background: var(--md-sys-color-surface);
+            margin: 0;
+            padding: 0;
+            color: #1c1b1f;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* --- Loader Animation --- */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            backdrop-filter: blur(5px);
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 5px solid #e0e0e0;
+            border-bottom-color: var(--md-sys-color-primary);
+            border-radius: 50%;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* --- Header --- */
+        header {
+            background: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            padding: 40px 20px 60px;
+            /* Increased bottom padding */
+            text-align: center;
+            border-bottom-left-radius: 30px;
+            border-bottom-right-radius: 30px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            position: relative;
+            z-index: 10;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        p {
+            margin: 8px 0 0;
+            font-size: 0.95rem;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+
+        /* --- Admin Toggle Button --- */
+        .admin-toggle {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: 0.2s;
+        }
+
+        .admin-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* --- Tabs (Segmented Button Style) --- */
+        .tabs {
+            display: flex;
+            justify-content: center;
+            margin-top: -30px;
+            padding: 0 15px;
+            position: relative;
+            z-index: 20;
+        }
+
+        .tab-btn {
+            flex: 1;
+            max-width: 160px;
+            padding: 14px;
+            border: none;
+            background: var(--md-sys-color-surface-container);
+            color: #49454f;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border-radius: 50px;
+            margin: 0 6px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            transition: all 0.3s var(--animation-timing);
+            font-family: 'Sarabun', sans-serif;
+        }
+
+        .tab-btn.active {
+            background: var(--md-sys-color-secondary);
+            color: white;
+            box-shadow: 0 4px 10px rgba(230, 81, 0, 0.4);
+            transform: translateY(-2px);
+        }
+
+        /* --- Stats Cards --- */
+        .stats-container {
+            display: flex;
+            gap: 12px;
+            padding: 25px 20px 15px;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+        }
+
+        .stats-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .stat-card {
+            min-width: 110px;
+            background: var(--md-sys-color-surface-container);
+            padding: 20px 15px;
+            border-radius: var(--border-radius-lg);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            flex: 1;
+            text-align: center;
+            transition: transform 0.2s;
+            border: 1px solid rgba(0, 0, 0, 0.03);
+        }
+
+        .stat-val {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--md-sys-color-primary);
+            display: block;
+            line-height: 1.2;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #757575;
+            font-weight: 500;
+        }
+
+        /* --- Sticky Search Bar --- */
+        .search-wrapper {
+            position: sticky;
+            top: 10px;
+            z-index: 100;
+            padding: 0 20px;
+            margin-bottom: 20px;
+            pointer-events: none;
+        }
+
+        .search-box {
+            position: relative;
+            max-width: 800px;
+            margin: 0 auto;
+            pointer-events: auto;
+            background: var(--md-sys-color-surface-container);
+            border-radius: 50px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: box-shadow 0.3s;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 16px 20px 16px 50px;
+            border: none;
+            border-radius: 50px;
+            background: transparent;
+            font-family: 'Sarabun', sans-serif;
+            font-size: 1rem;
+            outline: none;
+            color: #1c1b1f;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 20px;
+            color: #5f6368;
+            font-size: 1.2rem;
+        }
+
+        /* --- List & Cards --- */
+        .container {
+            padding: 5px 20px 100px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .project-card {
+            background: var(--md-sys-color-surface-container);
+            padding: 20px;
+            margin-bottom: 16px;
+            border-radius: var(--border-radius-lg);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s var(--animation-timing);
+            border-left: 6px solid #ddd;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideUpFade 0.5s forwards var(--animation-timing);
+        }
+
+        @keyframes slideUpFade {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .project-card.status-active {
+            border-left-color: var(--md-sys-color-secondary);
+        }
+
+        .project-card.status-done {
+            border-left-color: var(--md-sys-color-primary);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            gap: 10px;
+        }
+
+        .card-title {
+            font-weight: 600;
+            font-size: 1.05rem;
+            line-height: 1.5;
+            color: #1c1b1f;
+            flex: 1;
+        }
+
+        .status-badge {
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            color: white;
+            white-space: nowrap;
+            font-weight: 500;
+        }
+
+        .badge-active {
+            background: var(--md-sys-color-secondary);
+        }
+
+        .badge-pending {
+            background: #FFCA28;
+            /* Amber 400 */
+            color: #000;
+        }
+
+        .badge-done {
+            background: var(--md-sys-color-primary);
+        }
+
+        .card-meta {
+            font-size: 0.85rem;
+            color: #5f6368;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 5px;
+        }
+
+        .progress-bar-bg {
+            background: #e0e2ec;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 12px 0;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 1s ease-in-out;
+            border-radius: 4px;
+        }
+
+        /* --- Edit Button (Admin Only) --- */
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+            margin-left: 10px;
+        }
+
+        .admin-icon-btn {
+            display: none;
+            /* Hidden by default */
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: none;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-family: 'Material Symbols Rounded';
+            font-size: 16px;
+            color: #555;
+            transition: transform 0.2s;
+        }
+
+        .admin-icon-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .admin-icon-btn.edit-action {
+            color: var(--md-sys-color-primary);
+        }
+
+        .admin-icon-btn.delete-action {
+            color: var(--md-sys-color-error);
+        }
+
+        body.admin-mode .admin-icon-btn {
+            display: flex;
+        }
+
+        /* --- Floating Action Button (Add) --- */
+        .fab {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 56px;
+            height: 56px;
+            background: var(--md-sys-color-secondary);
+            color: white;
+            border-radius: 16px;
+            border: none;
+            box-shadow: 0 4px 12px rgba(230, 81, 0, 0.4);
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 90;
+            transition: transform 0.2s;
+        }
+
+        .fab:hover {
+            transform: scale(1.05);
+        }
+
+        body.admin-mode .fab {
+            display: flex;
+        }
+
+        /* --- Modal --- */
+        #modal,
+        #auth-modal,
+        #form-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            align-items: flex-end;
+            /* Mobile bottom sheet */
+            justify-content: center;
+            backdrop-filter: blur(3px);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        #modal.show,
+        #auth-modal.show,
+        #form-modal.show {
+            opacity: 1;
+        }
+
+        .modal-content {
+            background: #ffffff;
+            width: 100%;
+            max-width: 700px;
+            border-radius: 28px 28px 0 0;
+            padding: 30px 25px 40px;
+            max-height: 85vh;
+            overflow-y: auto;
+            margin-bottom: -100%;
+            /* Hidden state: pushed down */
+            transition: margin-bottom 0.4s var(--animation-timing);
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+            position: relative;
+            /* For absolute positioning of close button */
+        }
+
+        /* --- Floating Close Button (Sticky) --- */
+        .modal-close-btn {
+            position: sticky;
+            top: 10px;
+            float: right;
+            margin-right: -10px;
+            /* Pull right slightly */
+            margin-bottom: -40px;
+            /* Allow content to flow under */
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #f0f0f0;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            color: #555;
+            z-index: 100;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Clear float issues */
+        .modal-content::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+
+        .modal-close-btn:hover {
+            background: #e0e0e0;
+            transform: rotate(90deg);
+            color: #000;
+        }
+
+        .modal-close-btn span {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+
+        #modal.show .modal-content,
+        #auth-modal.show .modal-content,
+        #form-modal.show .modal-content {
+            margin-bottom: 0;
+            /* Visible state */
+        }
+
+        @media (min-width: 700px) {
+
+            #modal,
+            #auth-modal,
+            #form-modal {
+                align-items: center;
+            }
+
+            .modal-content {
+                border-radius: 28px;
+                max-height: 90vh;
+                margin-bottom: 0;
+                opacity: 0;
+                transition: opacity 0.3s;
+            }
+
+            #modal.show .modal-content,
+            #auth-modal.show .modal-content,
+            #form-modal.show .modal-content {
+                opacity: 1;
+            }
+        }
+
+        .section-header {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--md-sys-color-primary);
+            background: var(--md-sys-color-primary-container);
+            padding: 10px 16px;
+            border-radius: 12px;
+            margin: 25px 0 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .detail-group {
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+
+        .detail-label {
+            font-size: 0.85rem;
+            color: #757575;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .detail-value {
+            font-size: 1rem;
+            font-weight: 500;
+            color: #1c1b1f;
+            text-align: right;
+            flex: 1.5;
+            word-break: break-word;
+        }
+
+        .value-block {
+            display: block;
+            width: 100%;
+            text-align: left;
+            margin-top: 4px;
+            line-height: 1.6;
+        }
+
+        .close-btn {
+            width: 100%;
+            padding: 16px;
+            background: #f5f5f5;
+            color: #444;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 30px;
+            cursor: pointer;
+            font-family: 'Sarabun', sans-serif;
+        }
+
+        /* --- Form Styles --- */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            color: #444;
+        }
+
+        .form-input,
+        .form-textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-family: 'Sarabun', sans-serif;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus {
+            border-color: var(--md-sys-color-primary);
+            outline: none;
+        }
+
+        .primary-btn {
+            width: 100%;
+            padding: 16px;
+            background: var(--md-sys-color-primary);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            font-family: 'Sarabun', sans-serif;
+        }
+
+        .primary-btn:disabled {
+            background: #ccc;
+            box-shadow: none;
+        }
+
+        /* --- PDF Modal --- */
+        .pdf-modal-content {
+            background: white;
+            width: 95%;
+            height: 90vh;
+            /* Full height */
+            border-radius: 12px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .pdf-frame {
+            border: none;
+            width: 100%;
+            flex: 1;
+            background: #eee;
+        }
+
+        .pdf-header {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            color: #444;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <p style="margin-top:20px; color:#555; font-weight:500;">กำลังโหลดข้อมูล...</p>
+    </div>
+
+    <header>
+        <button class="admin-toggle" onclick="openAuthModal()">Admin Login</button>
+        <h1>กองช่าง อบต.สงยาง</h1>
+        <p>ระบบติดตามโครงการก่อสร้าง</p>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="filterProjects('active')">โครงการปัจจุบัน</button>
+        <button class="tab-btn" onclick="filterProjects('all')">โครงการทั้งหมด</button>
+    </div>
+
+    <div class="stats-container">
+        <div class="stat-card">
+            <span class="stat-val" id="totalCount">0</span>
+            <span class="stat-label">ทั้งหมด</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-val" id="activeCount" style="color:var(--md-sys-color-secondary)">0</span>
+            <span class="stat-label">กำลังทำ</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-val" id="totalBudget">0</span>
+            <span class="stat-label">งบรวม (ลบ.)</span>
+        </div>
+    </div>
+
+    <div class="search-wrapper">
+        <div class="search-box">
+            <span class="material-symbols-rounded search-icon">search</span>
+            <input type="text" id="searchInput" class="search-input" placeholder="ค้นหาดูโครงการ..."
+                oninput="handleSearch(this.value)">
+        </div>
+    </div>
+
+    <div class="container" id="projectList">
+        <!-- Projects will be rendered here -->
+    </div>
+
+    <button class="fab" onclick="openFormModal('add')">
+        <span class="material-symbols-rounded">add</span>
+    </button>
+
+    <!-- Project Detail Modal -->
+    <div id="modal" onclick="closeModal(event, 'modal')">
+        <div class="modal-content">
+            <button class="modal-close-btn" onclick="closeModalDirect('modal')">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+            <h2 id="m-title"
+                style="margin-top:0; color:#1c1b1f; font-size:1.4rem; padding-bottom:15px; border-bottom:1px solid #eee; padding-right: 40px;">
+            </h2>
+
+            <div
+                style="margin-bottom:20px; background:#f5fdf7; padding:20px; border-radius:20px; border:1px solid #e0e0e0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span class="detail-label" style="margin:0;">สถานะปัจจุบัน</span>
+                    <span id="m-status" style="font-weight:700; font-size:1.1rem;"></span>
+                </div>
+                <div
+                    style="display:flex; justify-content:space-between; font-size:0.85rem; color:#666; margin-bottom:8px;">
+                    <span>ความคืบหน้า (ตามเวลา)</span>
+                    <span id="m-percent">0%</span>
+                </div>
+                <div class="progress-bar-bg" style="height:10px; background:white; border:1px solid #ddd;">
+                    <div id="m-progress" class="progress-bar-fill"></div>
+                </div>
+            </div>
+
+            <div class="section-header">ข้อมูลทั่วไป</div>
+            <div class="detail-group"><span class="detail-label">ชื่อโครงการ</span><span id="m-project-name"
+                    class="detail-value value-block"></span></div>
+            <div class="detail-group"><span class="detail-label">รายละเอียด</span><span id="m-desc"
+                    class="detail-value value-block"></span></div>
+            <div class="detail-group"><span class="detail-label">งบประมาณ</span><span id="m-budget"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">ผู้รับจ้าง</span><span id="m-contractor"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">แหล่งเงินงบประมาณ</span><span id="m-budget-source"
+                    class="detail-value"></span></div>
+
+            <div style="margin-top:10px;">
+                <button id="m-boq-btn"
+                    style="display:none; background:#DD2C00; color:white; border:none; padding:8px 16px; border-radius:20px; cursor:pointer; font-size:0.9rem; align-items:center; gap:5px;">
+                    📄 ดูเอกสาร BOQ (PDF)
+                </button>
+            </div>
+
+            <div class="section-header">ข้อมูลคำสั่งจ้าง</div>
+            <div class="detail-group"><span class="detail-label">เลขที่คำสั่ง</span><span id="m-order-no"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">วันที่ลงนาม (คำสั่ง)</span><span id="m-order-date"
+                    class="detail-value"></span></div>
+
+            <div class="section-header">สัญญาจ้าง</div>
+            <div class="detail-group"><span class="detail-label">เลขที่สัญญา</span><span id="m-contract-no"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">วันที่ลงนาม (สัญญา)</span><span id="m-sign-date"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">สิ้นสุดสัญญา</span><span id="m-end-date"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">ระยะเวลา (ตามสัญญา)</span><span id="m-duration"
+                    class="detail-value"></span></div>
+
+            <div class="section-header">การดำเนินงาน</div>
+            <div class="detail-group"><span class="detail-label">วันที่แจ้งเข้างาน</span><span id="m-start-date"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">วันที่ส่งมอบงาน</span><span id="m-delivery-date"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">วันที่ตรวจรับ</span><span id="m-inspection-date"
+                    class="detail-value"></span></div>
+
+            <div class="section-header">คณะกรรมการและผู้ควบคุมงาน</div>
+            <div class="detail-group"><span class="detail-label">ผู้ควบคุมงาน</span><span id="m-supervisor"
+                    class="detail-value value-block"></span></div>
+            <div class="detail-group"><span class="detail-label">คณะกรรมการ</span><span id="m-committee"
+                    class="detail-value value-block" style="white-space: pre-line;"></span></div>
+
+            <button id="m-edit-btn" class="primary-btn"
+                style="background-color: #ffca28; color: #4e342e; margin-bottom: 12px; display: none;">✏️
+                แก้ไขข้อมูลโครงการ</button>
+            <button class="close-btn" onclick="closeModalDirect('modal')">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" onclick="closeModal(event, 'auth-modal')">
+        <div class="modal-content" style="max-width:400px;">
+            <h3>Admin Login</h3>
+            <input type="password" id="adminPass" class="form-input" value="admin123" placeholder="ป้อนรหัสผ่าน">
+            <button class="primary-btn" onclick="checkAuth()">เข้าสู่ระบบ</button>
+        </div>
+    </div>
+
+    <!-- PDF Modal -->
+    <div id="pdf-modal"
+        style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; padding: 20px;">
+        <div class="pdf-modal-content">
+            <div class="pdf-header">
+                <span id="pdf-title">เอกสาร BOQ</span>
+                <button type="button" class="close-btn" style="margin:0; padding:6px 15px; font-size:0.9rem;"
+                    onclick="closeModalDirect('pdf-modal')">ปิดหน้าต่าง</button>
+            </div>
+            <iframe id="pdf-frame" class="pdf-frame" src=""></iframe>
+        </div>
+    </div>
+
+    <!-- Edit/Add Form Modal -->
+    <!-- Changed onclick logic: Only close if ID matches and it's NOT the form-modal (prevent backdrop close for form) -->
+    <div id="form-modal">
+        <div class="modal-content">
+            <button class="modal-close-btn" onclick="closeModalDirect('form-modal')">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+            <h2 id="form-title">จัดการโครงการ</h2>
+            <!-- preventDefault on keydown enter to stop submit, handle submit manually -->
+            <form id="projectForm" onkeydown="if(event.key === 'Enter') event.preventDefault();"
+                onsubmit="handleFormSubmit(event)">
+                <input type="hidden" id="f-id"> <!-- Row Index -->
+
+                <div class="form-group">
+                    <label class="form-label">ชื่อโครงการ *</label>
+                    <input type="text" id="f-title" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">รายละเอียด/ปริมาณงาน</label>
+                    <textarea id="f-desc" class="form-textarea" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">งบประมาณ (บาท)</label>
+                    <input type="number" id="f-budget" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">แหล่งเงินงบประมาณ</label>
+                    <select id="f-budget-source" class="form-input">
+                        <option value="">- เลือกแหล่งเงิน -</option>
+                        <option value="งบข้อบัญญัติ">งบข้อบัญญัติ</option>
+                        <option value="จ่ายขาดเงินสะสม">จ่ายขาดเงินสะสม</option>
+                        <option value="เงินอุดหนุนเฉพาะกิจ">เงินอุดหนุนเฉพาะกิจ</option>
+                        <option value="เงินอุดหนุนจากหน่วยงานอื่น (อบจ.)">เงินอุดหนุนจากหน่วยงานอื่น (อบจ.)</option>
+                        <option value="เงินกันไว้เบิกเหลื่อมปี">เงินกันไว้เบิกเหลื่อมปี</option>
+                    </select>
+                </div>
+                <!-- BOQ Link -->
+                <div class="form-group">
+                    <label class="form-label">ลิงก์ไฟล์ BOQ (Google Drive PDF)</label>
+                    <input type="text" id="f-boq-link" class="form-input"
+                        placeholder="วางลิงก์ที่นี่ (https://drive.google.com/...)">
+                </div>
+
+                <div class="section-header" style="margin: 15px 0 10px; font-size: 0.9rem;">ข้อมูลคำสั่งจ้าง</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label class="form-label">เลขที่คำสั่ง</label>
+                        <input type="text" id="f-order-no" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">วันที่ลงนาม (คำสั่ง)</label>
+                        <input type="date" id="f-order-date" class="form-input">
+                    </div>
+                </div>
+
+                <div class="section-header" style="margin: 15px 0 10px; font-size: 0.9rem;">สัญญาจ้าง</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label class="form-label">เลขที่สัญญา</label>
+                        <input type="text" id="f-contract-no" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">วันที่ลงนาม (สัญญา)</label>
+                        <input type="date" id="f-sign-date" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">สิ้นสุดสัญญา</label>
+                        <input type="date" id="f-end" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">ระยะเวลา (วัน)</label>
+                        <input type="text" id="f-duration" class="form-input">
+                    </div>
+                </div>
+
+                <div class="section-header" style="margin: 15px 0 10px; font-size: 0.9rem;">การดำเนินงาน</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label class="form-label">วันที่แจ้งเข้างาน</label>
+                        <input type="date" id="f-start" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">วันที่ส่งมอบงาน</label>
+                        <input type="date" id="f-delivery-date" class="form-input">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">วันที่ตรวจรับ</label>
+                    <input type="date" id="f-inspection-date" class="form-input">
+                </div>
+
+                <div class="section-header" style="margin: 15px 0 10px; font-size: 0.9rem;">ผู้เกี่ยวข้อง</div>
+                <div class="form-group">
+                    <label class="form-label">ผู้รับจ้าง</label>
+                    <input type="text" id="f-contractor" class="form-input" list="list-contractors">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ผู้ควบคุมงาน</label>
+                    <input type="text" id="f-supervisor" class="form-input" list="list-supervisors">
+                </div>
+                <!-- Committee: Since it's 3 cols in sheet, let's just use 3 inputs or one textarea. 
+                     The sheet has Col 14, 15, 16. Let's provide 3 inputs for clarity or just map to 3 lines in a textarea?
+                     User asked for "every detail". Let's do 3 inputs for strict mapping. -->
+                <div class="form-group">
+                    <label class="form-label">คณะกรรมการ (คนที่ 1)</label>
+                    <input type="text" id="f-comm1" class="form-input" list="list-committees">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">คณะกรรมการ (คนที่ 2)</label>
+                    <input type="text" id="f-comm2" class="form-input" list="list-committees">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">คณะกรรมการ (คนที่ 3)</label>
+                    <input type="text" id="f-comm3" class="form-input" list="list-committees">
+                </div>
+
+                <!-- Datalists for Autocomplete -->
+                <datalist id="list-contractors"></datalist>
+                <datalist id="list-supervisors"></datalist>
+                <datalist id="list-committees"></datalist>
+
+                <div class="form-group" style="margin-top:15px;">
+                    <label class="form-label">สถานะ</label>
+                    <select id="f-status" class="form-input">
+                        <option value="รอดำเนินการ">รอดำเนินการ</option>
+                        <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
+                        <option value="ส่งมอบงานแล้ว">ส่งมอบงานแล้ว</option>
+                    </select>
+                </div>
+
+                <button type="submit" id="saveBtn" class="primary-btn" style="margin-top:20px;">บันทึกข้อมูล</button>
+                <!-- Close button via Top Right now -->
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CONFIGURATION ---
+        const API_URL = 'https://script.google.com/macros/s/AKfycbyiUz1MgQBYsQ4Vt8wBRFbGWAGlFzHB0srOuZ2hD2nm0q6LZf9pVC0Rxm4epFdU8QPU/exec';
+
+        let projects = [];
+        let rawData = []; // Store raw rows for editing with original index
+        let searchTerm = "";
+        let currentFilterType = 'active';
+
+        // --- 2. INITIALIZATION ---
+        async function init() {
+            try {
+                document.getElementById('loader').style.display = 'flex';
+
+                // Fetch JSON from Google Apps Script (Add timestamp to prevent caching)
+                const response = await fetch(API_URL + '?t=' + new Date().getTime());
+                const result = await response.json();
+
+                let rows = [];
+                if (result.status && result.status !== 'success' && !result.projects) throw new Error(result.message);
+
+                // Handle new format { projects: [], options: {} } or old format []
+                if (result.projects) {
+                    rows = result.projects;
+                    if (result.options) populateDatalists(result.options, result.projects);
+                } else {
+                    if (Array.isArray(result)) {
+                        rows = result; // Old format fallback
+                    } else if (result.data) {
+                        rows = result.data; // Wrapper fallback
+                    }
+                }
+
+                rawData = rows; // Store raw rows
+
+                // Map Data to Objects
+                projects = rows.map((row, index) => {
+                    // Handle if row is an object {id, data} (Old compatibility) or just an array
+                    const r = row.data ? row.data : row;
+                    const id = row.id !== undefined ? row.id : index;
+
+                    let rawStatus = r[17] || "";
+                    let isDone = rawStatus.includes('100') || rawStatus.includes('เสร็จ') || rawStatus.includes('ส่งมอบ');
+
+                    return {
+                        id: id,
+                        title: r[0],
+                        desc: r[1] || "",
+                        budget: parseInt((r[2] || "0").toString().replace(/,/g, '')),
+                        orderNo: String(r[3] || "-"), // Force String, no date conversion
+                        orderDate: convertDate(r[4]),
+                        contractNo: String(r[5] || "-"), // Force String, no date conversion
+                        signDate: convertDate(r[6]),
+                        start: convertDate(r[9]),
+                        end: convertDate(r[7]),
+                        deliveryDate: convertDate(r[10]),
+                        duration: r[8],
+                        inspectionDate: convertDate(r[11]),
+                        contractor: r[12] || "-",
+                        supervisor: r[13],
+                        committee: [r[14], r[15], r[16]].filter(Boolean),
+                        status: isDone ? 'done' : 'active',
+                        statusText: rawStatus || (isDone ? "เสร็จสิ้น" : "กำลังดำเนินการ"),
+                        budgetSource: r[18] || "",
+                        boqLink: r[19] || "",
+                        rawRow: r // Keep original for filling form
+                    };
+                });
+
+                // Sort: 
+                // 1. "กำลังดำเนินการ" First
+                // 2. Sign Date Descending
+                // 3. ID Descending
+                projects.sort((a, b) => {
+                    const scoreA = a.statusText === 'กำลังดำเนินการ' ? 1 : 0;
+                    const scoreB = b.statusText === 'กำลังดำเนินการ' ? 1 : 0;
+
+                    if (scoreA !== scoreB) return scoreB - scoreA; // 1 before 0
+
+                    // If same score (both In Progress or both Pending)
+                    const dateA = a.signDate || "";
+                    const dateB = b.signDate || "";
+                    if (dateA > dateB) return -1; // Newest first
+                    if (dateA < dateB) return 1;
+
+                    return b.id - a.id;
+                });
+
+                renderProjects(currentFilterType);
+                document.getElementById('loader').style.display = 'none';
+
+            } catch (err) {
+                alert('โหลดข้อมูลไม่สำเร็จ: ' + err.message);
+                console.error(err);
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+
+        // --- 3. RENDERING ---
+        function renderProjects(filterType) {
+            currentFilterType = filterType;
+            const list = document.getElementById('projectList');
+            list.innerHTML = '';
+
+            let totalB = 0, countAll = 0, countActive = 0;
+
+            projects.forEach((p) => {
+                totalB += p.budget;
+                countAll++;
+                if (p.status === 'active') countActive++;
+
+                if (filterType === 'active' && p.status !== 'active') return;
+                if (searchTerm !== "" && !p.title.toLowerCase().includes(searchTerm)) return;
+
+                // Pass statusText and signDate (Contract Sign Date) instead of Work Start Date
+                const progress = calculateProgress(p.signDate, p.end, p.statusText);
+
+                const html = `
+        <div class="project-card ${p.status === 'active' ? 'status-active' : 'status-done'}" onclick="openModal(${p.id})">
+            
+            <div class="card-header">
+                <div class="card-title">${p.title}</div>
+                <div class="header-actions">
+                    <button class="admin-icon-btn edit-action" onclick="openFormModal('edit', ${p.id}); event.stopPropagation();">edit</button>
+                    <button class="admin-icon-btn delete-action" onclick="deleteProject(${p.id}); event.stopPropagation();">delete</button>
+                    <span class="status-badge ${p.statusText === 'รอดำเนินการ' ? 'badge-pending' : (p.status === 'active' ? 'badge-active' : 'badge-done')}">${p.statusText}</span>
+                </div>
+            </div>
+            <div style="font-size: 0.85rem; line-height: 1.5; color: #333; margin-top: 5px; margin-bottom: 2px; padding-right: 10px;">${p.desc}</div>
+            <div class="card-meta">
+                <span>งบที่ใช้ไป: <strong>${p.budget.toLocaleString()}</strong> <small style="color:#666; font-weight:normal;">${p.budgetSource ? `(${p.budgetSource})` : ''}</small></span>
+                <span style="color:${p.status === 'active' ? 'var(--md-sys-color-secondary)' : '#757575'}">${progress}%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: ${progress}%; background: ${p.status === 'active' ? 'var(--md-sys-color-secondary)' : 'var(--md-sys-color-primary)'}"></div>
+            </div>
+            ${p.contractor && p.contractor !== "-" ? `
+            <div class="card-meta">
+                <small style="display:flex; align-items:center; gap:5px;"><i class="fas fa-hard-hat" style="font-size:0.8em"></i> ${p.contractor}</small>
+            </div>` : ''}
+        </div>`;
+                list.innerHTML += html;
+            });
+
+            document.getElementById('totalCount').innerText = countAll;
+            document.getElementById('activeCount').innerText = countActive;
+            document.getElementById('totalBudget').innerText = (totalB / 1000000).toFixed(2);
+        }
+
+        // --- 4. DATA LOGIC (CRUD) ---
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            btn.innerText = "กำลังบันทึก...";
+
+            const id = document.getElementById('f-id').value;
+            const isEdit = id !== "";
+
+            // Construct Data Array (Must match Sheet Column Order 0-17)
+            // Default empty strings for unused fields in this simple form
+            const newData = new Array(18).fill("");
+
+            newData[0] = document.getElementById('f-title').value;
+            newData[1] = document.getElementById('f-desc').value;
+            newData[2] = document.getElementById('f-budget').value;
+
+            newData[3] = document.getElementById('f-order-no').value;
+            newData[4] = formatDateForSheet(document.getElementById('f-order-date').value);
+
+            newData[5] = document.getElementById('f-contract-no').value;
+            newData[6] = formatDateForSheet(document.getElementById('f-sign-date').value);
+
+            newData[7] = formatDateForSheet(document.getElementById('f-end').value); // Col H (End Contract)
+            newData[8] = document.getElementById('f-duration').value;
+
+            newData[9] = formatDateForSheet(document.getElementById('f-start').value); // Col J (Start Work)
+            newData[10] = formatDateForSheet(document.getElementById('f-delivery-date').value);
+            newData[11] = formatDateForSheet(document.getElementById('f-inspection-date').value);
+
+            newData[12] = document.getElementById('f-contractor').value;
+            newData[13] = document.getElementById('f-supervisor').value;
+
+            newData[14] = document.getElementById('f-comm1').value;
+            newData[15] = document.getElementById('f-comm2').value;
+            newData[16] = document.getElementById('f-comm3').value;
+
+            newData[17] = document.getElementById('f-status').value;
+            newData[18] = document.getElementById('f-budget-source').value;
+            newData[19] = document.getElementById('f-boq-link').value; // Col 19
+
+            // Preserve other fields if editing (redundant now if we map all, but good for safety)
+            if (isEdit) {
+                // Since we map everything now, this might just be preserving unknown future cols
+                const original = projects.find(p => p.id == id).rawRow;
+                for (let i = 0; i < original.length; i++) {
+                    if (newData[i] === undefined && original[i]) newData[i] = original[i];
+                }
+            }
+
+            const payload = {
+                action: isEdit ? 'update' : 'create',
+                id: id,
+                data: newData
+            };
+
+            // Send to WAS using no-cors (Note: we can't read response in no-cors easily, 
+            // but standard fetch works with GAS if we handle redirects, let's try standard)
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                    // mode: 'no-cors' // Use standard mode for JSON response
+                });
+
+                alert('บันทึกสำเร็จ');
+                closeModalDirect('form-modal');
+                init(); // Reload data
+            } catch (err) {
+                alert('เกิดข้อผิดพลาด: ' + err);
+            } finally {
+                btn.disabled = false;
+                btn.innerText = "บันทึกข้อมูล";
+            }
+        }
+
+        async function deleteProject(id) {
+            if (!confirm('ยืนยันที่จะลบโครงการนี้?')) return;
+
+            try {
+                document.getElementById('loader').style.display = 'flex';
+                await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'delete', id: id })
+                });
+                alert('ลบข้อมูลเรียบร้อย');
+                init();
+            } catch (err) {
+                alert('ลบไม่สำเร็จ: ' + err);
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+
+        // --- 5. UTILS ---
+        function calculateProgress(start, end, statusText) {
+            // Priority 1: If status is 'Completed' or 'Delivered' (ส่งมอบงานแล้ว), force 100%
+            if (statusText && (statusText.includes("เสร็จ") || statusText.includes("ส่งมอบ"))) {
+                return 100;
+            }
+
+            // Priority 2: Calculate date range
+            // NOTE: 'start' here should be passed as 'signDate' (Contract Sign Date) per user request
+            if (!start || !end || start === "-" || end === "-") return 0;
+
+            const s = new Date(start);
+            const e = new Date(end);
+            const now = new Date();
+
+            if (now < s) return 0;
+            if (now > e) return 100;
+
+            const total = e - s;
+            const current = now - s;
+
+            return total <= 0 ? 0 : Math.floor((current / total) * 100);
+        }
+
+        function convertDate(str) {
+            // Convert Thai date format dd/mm/yyyy to yyyy-mm-dd if needed
+            if (!str || str.includes('-')) return str; // Already yyyy-mm-dd or empty
+            const p = str.split('/');
+            if (p.length === 3) {
+                let y = parseInt(p[2]);
+                if (y > 2400) y -= 543; // Convert BE to CE
+                return `${y}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+            }
+            return str;
+        }
+
+        function formatDateForSheet(isoDate) {
+            // Input yyyy-mm-dd -> Output dd/mm/yyyy
+            if (!isoDate) return "";
+            const d = new Date(isoDate);
+            return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear() + 543}`;
+        }
+
+        function formatDateDisplay(str) {
+            if (!str || str === "-") return "-";
+            const d = new Date(str);
+            if (isNaN(d)) return str;
+            return d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        // --- 6. UI ACTIONS ---
+        function openModal(id) {
+            const p = projects.find(x => x.id == id);
+            if (!p) return;
+
+            const el = (i, t) => {
+                const node = document.getElementById(i);
+                if (node) node.innerText = t || "-";
+            };
+            el('m-project-name', p.title);
+            el('m-desc', p.desc);
+            el('m-budget', p.budget.toLocaleString());
+            el('m-contractor', p.contractor);
+            el('m-status', p.statusText);
+
+            const boqBtn = document.getElementById('m-boq-btn');
+            if (p.boqLink) {
+                boqBtn.style.display = 'inline-flex';
+                boqBtn.onclick = () => openPdfModal(p.boqLink);
+            } else {
+                boqBtn.style.display = 'none';
+            }
+
+            el('m-order-no', p.orderNo);
+            el('m-order-date', formatDateDisplay(p.orderDate));
+
+            el('m-contract-no', p.contractNo);
+            el('m-sign-date', formatDateDisplay(p.signDate));
+            el('m-end-date', formatDateDisplay(p.end));
+            el('m-duration', p.duration + (p.duration !== "-" ? " วัน" : ""));
+
+            el('m-start-date', formatDateDisplay(p.start));
+            el('m-delivery-date', formatDateDisplay(p.deliveryDate));
+            el('m-inspection-date', formatDateDisplay(p.inspectionDate));
+
+            el('m-supervisor', p.supervisor);
+
+            // Handle Committee with Line Breaks
+            const committeeNode = document.getElementById('m-committee');
+            if (committeeNode) {
+                let text = Array.isArray(p.committee) ? p.committee.join('<br>') : p.committee.replace(/\\n/g, '<br>');
+                // Also clean up any literal backslashes if they exist
+                text = text.replace(/\\/g, '<br>');
+                committeeNode.innerHTML = text || "-";
+            }
+
+            // Update modal progress logic to match list logic
+            // Use signDate (Contract Sign Date) now
+            const progress = calculateProgress(p.signDate, p.end, p.statusText);
+            document.getElementById('m-percent').innerText = progress + "%";
+            document.getElementById('m-progress').style.width = progress + "%";
+
+            // Handle Edit Button in Modal
+            const editBtn = document.getElementById('m-edit-btn');
+            if (editBtn) {
+                editBtn.onclick = () => {
+                    closeModalDirect('modal');
+                    openFormModal('edit', id);
+                };
+                // Check if admin
+                if (document.body.classList.contains('admin-mode')) {
+                    editBtn.style.display = 'block';
+                } else {
+                    editBtn.style.display = 'none';
+                }
+            }
+
+            showModal('modal');
+        }
+
+        function openFormModal(mode, id = null) {
+            document.getElementById('projectForm').reset();
+            const title = document.getElementById('form-title');
+
+            if (mode === 'edit') {
+                title.innerText = "แก้ไขโครงการ";
+                const p = projects.find(x => x.id == id);
+                const r = p.rawRow;
+
+                // Helper to safely set value
+                const setVal = (eid, val) => {
+                    const el = document.getElementById(eid);
+                    if (el) el.value = (val !== undefined && val !== null) ? val : "";
+                };
+                const setDate = (eid, val) => {
+                    const el = document.getElementById(eid);
+                    if (el) el.value = formatDateForInput(val);
+                };
+
+                setVal('f-id', id);
+                setVal('f-title', r[0]);
+                setVal('f-desc', r[1]);
+                setVal('f-budget', r[2]);
+
+                setVal('f-order-no', r[3]);
+                setDate('f-order-date', r[4]);
+
+                setVal('f-contract-no', r[5]);
+                setDate('f-sign-date', r[6]);
+                setDate('f-end', r[7]);
+                setVal('f-duration', r[8]);
+
+                setDate('f-start', r[9]);
+                setDate('f-delivery-date', r[10]);
+                setDate('f-inspection-date', r[11]);
+
+                setVal('f-contractor', r[12]);
+                setVal('f-supervisor', r[13]);
+
+                setVal('f-comm1', r[14]);
+                setVal('f-comm2', r[15]);
+                setVal('f-comm3', r[16]);
+
+                setVal('f-status', r[17]);
+                setVal('f-budget-source', r[18]);
+                setVal('f-boq-link', r[19]);
+            } else {
+                title.innerText = "เพิ่มโครงการใหม่";
+                document.getElementById('f-id').value = ""; // Empty for new
+            }
+            showModal('form-modal');
+        }
+
+        // Helper to convert DD/MM/YYYY or various formats to YYYY-MM-DD for input[type=date]
+        function formatDateForInput(str) {
+            if (!str) return "";
+            // Handle Thai Date Format dd/mm/yyyy (e.g. 20/02/2569)
+            if (str.includes('/')) {
+                const parts = str.split('/');
+                if (parts.length === 3) {
+                    let d = parseInt(parts[0]);
+                    let m = parseInt(parts[1]);
+                    let y = parseInt(parts[2]);
+                    if (y > 2400) y -= 543; // Convert BE to CE
+                    return `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+                }
+            }
+            // Try standard parse
+            const date = new Date(str);
+            if (!isNaN(date.getTime())) {
+                return date.toISOString().split('T')[0];
+            }
+            return "";
+        }
+
+        function openAuthModal() { showModal('auth-modal'); }
+
+        function checkAuth() {
+            const pass = document.getElementById('adminPass').value;
+            if (pass === 'admin123') {
+                document.body.classList.add('admin-mode');
+                closeModalDirect('auth-modal');
+                alert('เข้าสู่โหมดผู้ดูแลระบบแล้ว');
+            } else {
+                alert('รหัสผ่านไม่ถูกต้อง');
+            }
+        }
+
+        function showModal(id) {
+            const m = document.getElementById(id);
+            m.style.display = 'flex';
+            setTimeout(() => m.classList.add('show'), 10);
+        }
+
+        function closeModal(e, id) { if (e.target.id === id) closeModalDirect(id); }
+        function closeModalDirect(id) {
+            const m = document.getElementById(id);
+            m.classList.remove('show');
+            setTimeout(() => m.style.display = 'none', 300);
+        }
+
+        function filterProjects(type) {
+            renderProjects(type);
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+        function handleSearch(val) { searchTerm = val.toLowerCase(); renderProjects(currentFilterType); }
+
+        function openPdfModal(link) {
+            if (!link) return;
+            let src = link;
+            // Convert Share ID to Preview URL
+            const idMatch = link.match(/\/d\/([a-zA-Z0-9_-]+)/) || link.match(/id=([a-zA-Z0-9_-]+)/);
+            if (idMatch && idMatch[1]) {
+                src = `https://drive.google.com/file/d/${idMatch[1]}/preview`;
+            }
+            document.getElementById('pdf-frame').src = src;
+            document.getElementById('pdf-modal').style.display = 'flex';
+        }
+
+        function populateDatalists(opts, history = []) {
+            // Extract history (indices: Contractor=12, Supervisor=13, Committees=14,15,16)
+            const histContractors = history.map(p => p[12]).filter(x => x && x !== '-');
+            const histSupervisors = history.map(p => p[13]).filter(x => x && x !== '-');
+            const histCommittees = history.flatMap(p => [p[14], p[15], p[16]]).filter(x => x && x !== '-');
+
+            const fill = (id, list, extraList = []) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                // Merge master options with historical data, remove duplicates/empties
+                const merged = [...new Set([...list, ...extraList])]
+                    .map(x => x.toString().trim())
+                    .filter(x => x && x !== "");
+
+                // Sort alphabetically
+                merged.sort((a, b) => a.localeCompare(b, 'th'));
+
+                el.innerHTML = merged.map(item => `<option value="${item}">`).join('');
+            };
+
+            fill('list-contractors', opts.contractors || [], histContractors);
+            fill('list-supervisors', opts.supervisors || [], histSupervisors);
+            fill('list-committees', opts.committees || [], histCommittees);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>
