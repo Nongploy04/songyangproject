@@ -963,28 +963,29 @@
         // --- 1. CONFIGURATION ---
         const API_URL = 'https://script.google.com/macros/s/AKfycbyiUz1MgQBYsQ4Vt8wBRFbGWAGlFzHB0srOuZ2hD2nm0q6LZf9pVC0Rxm4epFdU8QPU/exec';
 
-        // MAPPING: Ensure these match your Google Sheet Headers (Row 1) EXACTLY!
+        // MAPPING: Must match Google Sheet Headers (Row 1) EXACTLY!
+        // Now using English Headers per request
         const COLUMN_MAP = {
-            title: "ชื่อโครงการ",
-            desc: "รายละเอียด/ปริมาณงาน",
-            budget: "งบประมาณ",
-            orderNo: "เลขที่คำสั่ง",
-            orderDate: "วันที่ลงนาม (คำสั่ง)",
-            contractNo: "เลขที่สัญญา",
-            signDate: "วันที่ลงนาม (สัญญา)",
-            end: "สิ้นสุดสัญญา",
-            duration: "ระยะเวลา",
-            start: "วันที่แจ้งเข้างาน",
-            deliveryDate: "วันที่ส่งมอบงาน",
-            inspectionDate: "วันที่ตรวจรับ",
-            contractor: "ผู้รับจ้าง",
-            supervisor: "ผู้ควบคุมงาน",
-            comm1: "คณะกรรมการ (คนที่ 1)",
-            comm2: "คณะกรรมการ (คนที่ 2)",
-            comm3: "คณะกรรมการ (คนที่ 3)",
-            status: "สถานะ",
-            budgetSource: "แหล่งเงินงบประมาณ",
-            boqLink: "ลิงก์ไฟล์ BOQ"
+            title: "Project Name",
+            desc: "Description",
+            budget: "Budget",
+            orderNo: "Order No",
+            orderDate: "Order Date",
+            contractNo: "Contract No",
+            signDate: "Switch Contract Sign Date",
+            end: "Contract End Date",
+            duration: "Duration",
+            start: "Work Start Date",
+            deliveryDate: "Delivery Date",
+            inspectionDate: "Inspection Date",
+            contractor: "Contractor",
+            supervisor: "Supervisor",
+            comm1: "Committee 1",
+            comm2: "Committee 2",
+            comm3: "Committee 3",
+            status: "Status",
+            budgetSource: "Budget Source",
+            boqLink: "BOQ Link"
         };
 
         let projects = [];
