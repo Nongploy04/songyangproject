@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ติดตามโครงการ กองช่าง อบต.สงยาง</title>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <?!= include('css'); ?>
+</head>
+
+<body>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <p style="margin-top:20px; color:#555; font-weight:500;">กำลังโหลดข้อมูล...</p>
+    </div>
+
+    <header>
+        <button class="admin-toggle" onclick="openAuthModal()">Admin Login</button>
+        <h1>กองช่าง อบต.สงยาง</h1>
+        <p>ระบบติดตามโครงการก่อสร้าง</p>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="filterProjects('active')">โครงการปัจจุบัน</button>
+        <button class="tab-btn" onclick="filterProjects('all')">โครงการทั้งหมด</button>
+    </div>
+
+    <div class="stats-container">
+        <div class="stat-card">
+            <span class="stat-val" id="totalCount">0</span>
+            <span class="stat-label">ทั้งหมด</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-val" id="activeCount" style="color:var(--md-sys-color-secondary)">0</span>
+            <span class="stat-label">กำลังทำ</span>
+        </div>
+        <div class="stat-card">
+            <span class="stat-val" id="totalBudget">0</span>
+            <span class="stat-label">งบรวม (ลบ.)</span>
+        </div>
+    </div>
+
+    <div class="search-wrapper">
+        <div class="search-box">
+            <span class="material-symbols-rounded search-icon">search</span>
+            <input type="text" id="searchInput" class="search-input" placeholder="ค้นหาดูโครงการ..."
+                oninput="handleSearch(this.value)">
+        </div>
+    </div>
+
+    <div class="container" id="projectList">
+        <!-- Projects will be rendered here -->
+    </div>
+
+    <button class="fab" onclick="openFormModal('add')">
+        <span class="material-symbols-rounded">add</span>
+    </button>
+
+    <!-- Project Detail Modal -->
+    <div id="modal" onclick="closeModal(event, 'modal')">
+        <div class="modal-content">
+            <button class="modal-close-btn" onclick="closeModalDirect('modal')">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+            <h2 id="m-title"
+                style="margin-top:0; color:#1c1b1f; font-size:1.4rem; padding-bottom:15px; border-bottom:1px solid #eee; padding-right: 40px;">
+            </h2>
+
+            <div
+                style="margin-bottom:20px; background:#f5fdf7; padding:20px; border-radius:20px; border:1px solid #e0e0e0;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <span class="detail-label" style="margin:0;">สถานะปัจจุบัน</span>
+                    <span id="m-status" style="font-weight:700; font-size:1.1rem;"></span>
+                </div>
+                <div
+                    style="display:flex; justify-content:space-between; font-size:0.85rem; color:#666; margin-bottom:8px;">
+                    <span>ความคืบหน้า (ตามเวลา)</span>
+                    <span id="m-percent">0%</span>
+                </div>
+                <div class="progress-bar-bg" style="height:10px; background:white; border:1px solid #ddd;">
+                    <div id="m-progress" class="progress-bar-fill"></div>
+                </div>
+            </div>
+
+            <div class="section-header">ข้อมูลทั่วไป</div>
+            <div class="detail-group"><span class="detail-label">ชื่อโครงการ</span><span id="m-project-name"
+                    class="detail-value value-block"></span></div>
+            <div class="detail-group"><span class="detail-label">รายละเอียด</span><span id="m-desc"
+                    class="detail-value value-block"></span></div>
+            <div class="detail-group"><span class="detail-label">งบประมาณ</span><span id="m-budget"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">ผู้รับจ้าง</span><span id="m-contractor"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">แหล่งเงินงบประมาณ</span><span id="m-budget-source"
+                    class="detail-value"></span></div>
+
+            <div style="margin-top:10px;">
+                <button id="m-boq-btn"
+                    style="display:none; background:#DD2C00; color:white; border:none; padding:8px 16px; border-radius:20px; cursor:pointer; font-size:0.9rem; align-items:center; gap:5px;">
+                    📄 ดูเอกสาร BOQ (PDF)
+                </button>
+            </div>
+
+            <div class="section-header">ข้อมูลคำสั่งจ้าง</div>
+            <div class="detail-group"><span class="detail-label">เลขที่คำสั่ง</span><span id="m-order-no"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">วันที่ลงนาม (คำสั่ง)</span><span id="m-order-date"
+                    class="detail-value"></span></div>
+
+            <div class="section-header">สัญญาจ้าง</div>
+            <div class="detail-group"><span class="detail-label">เลขที่สัญญา</span><span id="m-contract-no"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">วันที่ลงนาม (สัญญา)</span><span id="m-sign-date"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">สิ้นสุดสัญญา</span><span id="m-end-date"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">ระยะเวลา (ตามสัญญา)</span><span id="m-duration"
+                    class="detail-value"></span></div>
+
+            <div class="section-header">การดำเนินงาน</div>
+            <div class="detail-group"><span class="detail-label">วันที่แจ้งเข้างาน</span><span id="m-start-date"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">วันที่ส่งมอบงาน</span><span id="m-delivery-date"
+                    class="detail-value"></span></div>
+            <div class="detail-group"><span class="detail-label">วันที่ตรวจรับ</span><span id="m-inspection-date"
+                    class="detail-value"></span></div>
+
+            <div class="section-header">คณะกรรมการและผู้ควบคุมงาน</div>
+            <div class="detail-group"><span class="detail-label">ผู้ควบคุมงาน</span><span id="m-supervisor"
+                    class="detail-value value-block"></span></div>
+            <div class="detail-group"><span class="detail-label">คณะกรรมการ</span><span id="m-committee"
+                    class="detail-value value-block" style="white-space: pre-line;"></span></div>
+
+            <button id="m-edit-btn" class="primary-btn"
+                style="background-color: #ffca28; color: #4e342e; margin-bottom: 12px; display: none;">✏️
+                แก้ไขข้อมูลโครงการ</button>
+            <button class="close-btn" onclick="closeModalDirect('modal')">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="auth-modal" onclick="closeModal(event, 'auth-modal')">
+        <div class="modal-content" style="max-width:400px;">
+            <h3>Admin Login</h3>
+            <input type="password" id="adminPass" class="form-input" value="admin123" placeholder="ป้อนรหัสผ่าน">
+            <button class="primary-btn" onclick="checkAuth()">เข้าสู่ระบบ</button>
+        </div>
+    </div>
+
+    <!-- PDF Modal -->
+    <div id="pdf-modal"
+        style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); z-index:2000; justify-content:center; align-items:center; padding: 20px;">
+        <div class="pdf-modal-content">
+            <div class="pdf-header">
+                <span id="pdf-title">เอกสาร BOQ</span>
+                <button type="button" class="close-btn" style="margin:0; padding:6px 15px; font-size:0.9rem;"
+                    onclick="closeModalDirect('pdf-modal')">ปิดหน้าต่าง</button>
+            </div>
+            <iframe id="pdf-frame" class="pdf-frame" src=""></iframe>
+        </div>
+    </div>
+
+    <!-- Edit/Add Form Modal -->
+    <div id="form-modal">
+        <div class="modal-content">
+            <button class="modal-close-btn" onclick="closeModalDirect('form-modal')">
+                <span class="material-symbols-rounded">close</span>
+            </button>
+            <h2 id="form-title">จัดการโครงการ</h2>
+            <form id="projectForm" onkeydown="if(event.key === 'Enter') event.preventDefault();"
+                onsubmit="handleFormSubmit(event)">
+                <input type="hidden" id="f-id">
+
+                <!-- Auto-fill Button -->
+                <div style="margin-bottom: 20px; text-align: center;">
+                    <input type="file" id="ai-upload" accept="image/*" style="display:none"
+                        onchange="handleImageUpload(this)">
+                    <button type="button" id="rescanBtn" class="secondary-btn"
+                        style="width: 100%; background: #e3f2fd; color: #1565c0; border: 1px dashed #1565c0;"
+                        onclick="document.getElementById('ai-upload').click()">
+                        <i class="fas fa-magic"></i> อัปโหลดรูปเพื่อกรอกข้อมูลอัตโนมัติ (AI)
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">ชื่อโครงการ *</label>
+                    <input type="text" id="f-title" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">รายละเอียด/ปริมาณงาน</label>
+                    <textarea id="f-desc" class="form-textarea" rows="2"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">งบประมาณ (บาท)</label>
+                    <input type="number" id="f-budget" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">แหล่งเงินงบประมาณ</label>
+                    <select id="f-budget-source" class="form-input">
+                        <option value="">- เลือกแหล่งเงิน -</option>
+                        <option value="งบข้อบัญญัติ">งบข้อบัญญัติ</option>
+                        <option value="จ่ายขาดเงินสะสม">จ่ายขาดเงินสะสม</option>
+                        <option value="เงินอุดหนุนเฉพาะกิจ">เงินอุดหนุนเฉพาะกิจ</option>
+                        <option value="เงินอุดหนุนจากหน่วยงานอื่น (อบจ.)">เงินอุดหนุนจากหน่วยงานอื่น (อบจ.)</option>
+                        <option value="เงินกันไว้เบิกเหลื่อมปี">เงินกันไว้เบิกเหลื่อมปี</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ลิงก์ไฟล์ BOQ (Google Drive PDF)</label>
+                    <input type="text" id="f-boq-link" class="form-input"
+                        placeholder="วางลิงก์ที่นี่ (https://drive.google.com/...)">
+                </div>
+
+                <div class="section-header" style="margin: 15px 0 10px; font-size: 0.9rem;">ข้อมูลคำสั่งจ้าง</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label class="form-label">เลขที่คำสั่ง</label>
+                        <input type="text" id="f-order-no" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">วันที่ลงนาม (คำสั่ง)</label>
+                        <input type="date" id="f-order-date" class="form-input">
+                    </div>
+                </div>
+
+                <div class="section-header" style="margin: 15px 0 10px; font-size: 0.9rem;">สัญญาจ้าง</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label class="form-label">เลขที่สัญญา</label>
+                        <input type="text" id="f-contract-no" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">วันที่ลงนาม (สัญญา)</label>
+                        <input type="date" id="f-sign-date" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">สิ้นสุดสัญญา</label>
+                        <input type="date" id="f-end" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">ระยะเวลา (วัน)</label>
+                        <input type="text" id="f-duration" class="form-input">
+                    </div>
+                </div>
+
+                <div class="section-header" style="margin: 15px 0 10px; font-size: 0.9rem;">การดำเนินงาน</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label class="form-label">วันที่แจ้งเข้างาน</label>
+                        <input type="date" id="f-start" class="form-input">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">วันที่ส่งมอบงาน</label>
+                        <input type="date" id="f-delivery-date" class="form-input">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">วันที่ตรวจรับ</label>
+                    <input type="date" id="f-inspection-date" class="form-input">
+                </div>
+
+                <div class="section-header" style="margin: 15px 0 10px; font-size: 0.9rem;">ผู้เกี่ยวข้อง</div>
+                <div class="form-group">
+                    <label class="form-label">ผู้รับจ้าง</label>
+                    <input type="text" id="f-contractor" class="form-input" list="list-contractors">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ผู้ควบคุมงาน</label>
+                    <input type="text" id="f-supervisor" class="form-input" list="list-supervisors">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">คณะกรรมการ (คนที่ 1)</label>
+                    <input type="text" id="f-comm1" class="form-input" list="list-committees">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">คณะกรรมการ (คนที่ 2)</label>
+                    <input type="text" id="f-comm2" class="form-input" list="list-committees">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">คณะกรรมการ (คนที่ 3)</label>
+                    <input type="text" id="f-comm3" class="form-input" list="list-committees">
+                </div>
+
+                <!-- Datalists for Autocomplete -->
+                <datalist id="list-contractors"></datalist>
+                <datalist id="list-supervisors"></datalist>
+                <datalist id="list-committees"></datalist>
+
+                <div class="form-group" style="margin-top:15px;">
+                    <label class="form-label">สถานะ</label>
+                    <select id="f-status" class="form-input">
+                        <option value="รอดำเนินการ">รอดำเนินการ</option>
+                        <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
+                        <option value="ส่งมอบงานแล้ว">ส่งมอบงานแล้ว</option>
+                    </select>
+                </div>
+
+                <button type="submit" id="saveBtn" class="primary-btn" style="margin-top:20px;">บันทึกข้อมูล</button>
+            </form>
+        </div>
+    </div>
+
+    <?!= include('js_main'); ?>
+    <?!= include('js_utils'); ?>
+</body>
+
+</html>

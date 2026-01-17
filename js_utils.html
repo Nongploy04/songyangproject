@@ -1,0 +1,270 @@
+<script>
+    // --- UTILITY FUNCTIONS ---
+
+    function calculateProgress(start, end, statusText) {
+        // Priority 1: If status is 'Completed' or 'Delivered', force 100%
+        if (statusText && (statusText.includes("เสร็จ") || statusText.includes("ส่งมอบ"))) {
+            return 100;
+        }
+
+        // Priority 2: Calculate date range
+        if (!start || !end || start === "-" || end === "-") return 0;
+
+        const s = new Date(start);
+        const e = new Date(end);
+        const now = new Date();
+
+        if (now < s) return 0;
+        if (now > e) return 100;
+
+        const total = e - s;
+        const current = now - s;
+
+        return total <= 0 ? 0 : Math.floor((current / total) * 100);
+    }
+
+    function convertDate(str) {
+        // Convert Thai date format dd/mm/yyyy to yyyy-mm-dd if needed
+        if (!str || str.includes('-')) return str;
+        const p = str.split('/');
+        if (p.length === 3) {
+            let y = parseInt(p[2]);
+            if (y > 2400) y -= 543; // Convert BE to CE
+            return `${y}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+        }
+        return str;
+    }
+
+    function formatDateForSheet(isoDate) {
+        // Input yyyy-mm-dd -> Output dd/mm/yyyy
+        if (!isoDate) return "";
+        const d = new Date(isoDate);
+        return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear() + 543}`;
+    }
+
+    function formatDateDisplay(str) {
+        if (!str || str === "-") return "-";
+        const d = new Date(str);
+        if (isNaN(d)) return str;
+        return d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+    }
+
+    function formatDateForInput(str) {
+        if (!str) return "";
+        // Handle Thai Date Format dd/mm/yyyy
+        if (str.includes('/')) {
+            const parts = str.split('/');
+            if (parts.length === 3) {
+                let d = parseInt(parts[0]);
+                let m = parseInt(parts[1]);
+                let y = parseInt(parts[2]);
+                if (y > 2400) y -= 543; // Convert BE to CE
+                return `${y}-${m.toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+            }
+        }
+        // Try standard parse
+        const date = new Date(str);
+        if (!isNaN(date.getTime())) {
+            return date.toISOString().split('T')[0];
+        }
+        return "";
+    }
+
+    // --- UI ACTIONS ---
+
+    function openModal(id) {
+        const p = projects.find(x => x.id == id);
+        if (!p) return;
+
+        const el = (i, t) => {
+            const node = document.getElementById(i);
+            if (node) node.innerText = t || "-";
+        };
+        el('m-project-name', p.title);
+        el('m-desc', p.desc);
+        el('m-budget', p.budget.toLocaleString());
+        el('m-contractor', p.contractor);
+        el('m-status', p.statusText);
+
+        const boqBtn = document.getElementById('m-boq-btn');
+        if (p.boqLink) {
+            boqBtn.style.display = 'inline-flex';
+            boqBtn.onclick = () => openPdfModal(p.boqLink);
+        } else {
+            boqBtn.style.display = 'none';
+        }
+
+        el('m-order-no', p.orderNo);
+        el('m-order-date', formatDateDisplay(p.orderDate));
+
+        el('m-contract-no', p.contractNo);
+        el('m-sign-date', formatDateDisplay(p.signDate));
+        el('m-end-date', formatDateDisplay(p.end));
+        el('m-duration', p.duration + (p.duration !== "-" ? " วัน" : ""));
+
+        el('m-start-date', formatDateDisplay(p.start));
+        el('m-delivery-date', formatDateDisplay(p.deliveryDate));
+        el('m-inspection-date', formatDateDisplay(p.inspectionDate));
+
+        el('m-supervisor', p.supervisor);
+
+        // Handle Committee with Line Breaks
+        const committeeNode = document.getElementById('m-committee');
+        if (committeeNode) {
+            let text = Array.isArray(p.committee) ? p.committee.join('<br>') : p.committee.replace(/\\n/g, '<br>');
+            text = text.replace(/\\/g, '<br>');
+            committeeNode.innerHTML = text || "-";
+        }
+
+        const progress = calculateProgress(p.signDate, p.end, p.statusText);
+        document.getElementById('m-percent').innerText = progress + "%";
+        const mParams = document.getElementById('m-progress');
+        mParams.style.width = progress + "%";
+        mParams.style.background = p.status === 'active' ? 'var(--md-sys-color-secondary)' : 'var(--md-sys-color-primary)';
+
+        // Handle Edit Button in Modal
+        const editBtn = document.getElementById('m-edit-btn');
+        if (editBtn) {
+            editBtn.onclick = () => {
+                closeModalDirect('modal');
+                openFormModal('edit', id);
+            };
+            if (document.body.classList.contains('admin-mode')) {
+                editBtn.style.display = 'block';
+            } else {
+                editBtn.style.display = 'none';
+            }
+        }
+
+        showModal('modal');
+    }
+
+    function openFormModal(mode, id = null) {
+        document.getElementById('projectForm').reset();
+        const title = document.getElementById('form-title');
+
+        if (mode === 'edit') {
+            title.innerText = "แก้ไขโครงการ";
+            const p = projects.find(x => x.id == id);
+            const r = p.rawObj;
+
+            const setVal = (eid, val) => {
+                const el = document.getElementById(eid);
+                if (el) el.value = (val !== undefined && val !== null) ? val : "";
+            };
+            const setDate = (eid, val) => {
+                const el = document.getElementById(eid);
+                if (el) el.value = formatDateForInput(val);
+            };
+
+            setVal('f-id', id);
+            setVal('f-title', r[COLUMN_MAP.title]);
+            setVal('f-desc', r[COLUMN_MAP.desc]);
+            setVal('f-budget', r[COLUMN_MAP.budget]);
+
+            setVal('f-order-no', r[COLUMN_MAP.orderNo]);
+            setDate('f-order-date', r[COLUMN_MAP.orderDate]);
+
+            setVal('f-contract-no', r[COLUMN_MAP.contractNo]);
+            setDate('f-sign-date', r[COLUMN_MAP.signDate]);
+            setDate('f-end', r[COLUMN_MAP.end]);
+            setVal('f-duration', r[COLUMN_MAP.duration]);
+
+            setDate('f-start', r[COLUMN_MAP.start]);
+            setDate('f-delivery-date', r[COLUMN_MAP.deliveryDate]);
+            setDate('f-inspection-date', r[COLUMN_MAP.inspectionDate]);
+
+            setVal('f-contractor', r[COLUMN_MAP.contractor]);
+            setVal('f-supervisor', r[COLUMN_MAP.supervisor]);
+
+            setVal('f-comm1', r[COLUMN_MAP.comm1]);
+            setVal('f-comm2', r[COLUMN_MAP.comm2]);
+            setVal('f-comm3', r[COLUMN_MAP.comm3]);
+
+            setVal('f-status', r[COLUMN_MAP.status]);
+            setVal('f-budget-source', r[COLUMN_MAP.budgetSource]);
+            setVal('f-boq-link', r[COLUMN_MAP.boqLink]);
+        } else {
+            title.innerText = "เพิ่มโครงการใหม่";
+            document.getElementById('f-id').value = "";
+        }
+        showModal('form-modal');
+    }
+
+    function openAuthModal() {
+        showModal('auth-modal');
+    }
+
+    function checkAuth() {
+        const pass = document.getElementById('adminPass').value;
+        if (pass === 'admin123') {
+            document.body.classList.add('admin-mode');
+            closeModalDirect('auth-modal');
+            alert('เข้าสู่โหมดผู้ดูแลระบบแล้ว');
+        } else {
+            alert('รหัสผ่านไม่ถูกต้อง');
+        }
+    }
+
+    function showModal(id) {
+        const m = document.getElementById(id);
+        m.style.display = 'flex';
+        setTimeout(() => m.classList.add('show'), 10);
+    }
+
+    function closeModal(e, id) {
+        if (e.target.id === id) closeModalDirect(id);
+    }
+
+    function closeModalDirect(id) {
+        const m = document.getElementById(id);
+        m.classList.remove('show');
+        setTimeout(() => m.style.display = 'none', 300);
+    }
+
+    function filterProjects(type) {
+        renderProjects(type);
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+    }
+
+    function handleSearch(val) {
+        searchTerm = val.toLowerCase();
+        renderProjects(currentFilterType);
+    }
+
+    function openPdfModal(link) {
+        if (!link) return;
+        let src = link;
+        // Convert Share ID to Preview URL
+        const idMatch = link.match(/\/d\/([a-zA-Z0-9_-]+)/) || link.match(/id=([a-zA-Z0-9_-]+)/);
+        if (idMatch && idMatch[1]) {
+            src = `https://drive.google.com/file/d/${idMatch[1]}/preview`;
+        }
+        document.getElementById('pdf-frame').src = src;
+        document.getElementById('pdf-modal').style.display = 'flex';
+    }
+
+    function populateDatalists(opts, history = []) {
+        // Extract history using COLUMN_MAP
+        const histContractors = history.map(p => p[COLUMN_MAP.contractor]).filter(x => x && x !== '-');
+        const histSupervisors = history.map(p => p[COLUMN_MAP.supervisor]).filter(x => x && x !== '-');
+        const histCommittees = history.flatMap(p => [p[COLUMN_MAP.comm1], p[COLUMN_MAP.comm2], p[COLUMN_MAP.comm3]]).filter(x => x && x !== '-');
+
+        const fill = (id, list, extraList = []) => {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const merged = [...new Set([...list, ...extraList])]
+                .map(x => x.toString().trim())
+                .filter(x => x && x !== "");
+
+            merged.sort((a, b) => a.localeCompare(b, 'th'));
+
+            el.innerHTML = merged.map(item => `<option value="${item}">`).join('');
+        };
+
+        fill('list-contractors', opts.contractors || [], histContractors);
+        fill('list-supervisors', opts.supervisors || [], histSupervisors);
+        fill('list-committees', opts.committees || [], histCommittees);
+    }
+</script>

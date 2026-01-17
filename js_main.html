@@ -1,0 +1,329 @@
+<script>
+    // --- 1. CONFIGURATION ---
+    const API_URL = 'https://script.google.com/macros/s/AKfycbxd0xC2SbmoBhkEoDCNszEF3eRPeeZA0LQshTOewXcVLad_YquleDJ5-nmpGeHISIKs/exec';
+
+    // --- NEW: Handle Image Upload with Drive Integration ---
+    async function handleImageUpload(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const btn = document.getElementById('rescanBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังอัปโหลดไปยัง Google Drive...';
+        btn.disabled = true;
+
+        try {
+            // 1. Upload to Google Drive first
+            const driveUrl = await uploadToDrive(file);
+
+            // 2. Send Drive URL to GAS for AI analysis
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'parse_image_from_drive', imageUrl: driveUrl })
+            });
+
+            if (!response.ok) throw new Error(`Server Error (${response.status})`);
+
+            const result = await response.json();
+
+            if (result.status === 'success' && result.data) {
+                const d = result.data;
+                const setVal = (id, val) => { if (document.getElementById(id)) document.getElementById(id).value = val || ""; };
+
+                setVal('f-title', d.title);
+                setVal('f-desc', d.desc);
+                setVal('f-budget', d.budget);
+                setVal('f-order-no', d.orderNo);
+                setVal('f-order-date', d.orderDate);
+                setVal('f-contract-no', d.contractNo);
+                setVal('f-sign-date', d.signDate);
+                setVal('f-end', d.end);
+                setVal('f-duration', d.duration);
+                setVal('f-start', d.start);
+                setVal('f-delivery-date', d.deliveryDate);
+                setVal('f-inspection-date', d.inspectionDate);
+                setVal('f-contractor', d.contractor);
+                setVal('f-supervisor', d.supervisor);
+                setVal('f-comm1', d.comm1);
+                setVal('f-comm2', d.comm2);
+                setVal('f-comm3', d.comm3);
+
+                alert('✨ วิเคราะห์เสร็จสิ้น! ข้อมูลถูกกรอกแล้วครับ');
+            } else {
+                throw new Error(result.message || "ไม่สามารถอ่านข้อมูลได้");
+            }
+
+        } catch (err) {
+            console.error(err);
+            alert('เกิดข้อผิดพลาด: ' + err.message);
+        } finally {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            input.value = "";
+        }
+    }
+
+    // Helper: Upload file to Google Drive via Apps Script
+    async function uploadToDrive(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                try {
+                    const base64Data = e.target.result.split(',')[1]; // Remove data:image/jpeg;base64,
+
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            action: 'upload_to_drive',
+                            fileName: file.name,
+                            mimeType: file.type,
+                            data: base64Data
+                        })
+                    });
+
+                    const result = await response.json();
+
+                    if (result.status === 'success' && result.url) {
+                        resolve(result.url);
+                    } else {
+                        reject(new Error(result.message || 'Upload failed'));
+                    }
+                } catch (error) {
+                    reject(error);
+                }
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // MAPPING: Must match Google Sheet Headers (Row 1) EXACTLY!
+    const COLUMN_MAP = {
+        title: "Project Name",
+        desc: "Description",
+        budget: "Budget",
+        orderNo: "Order No",
+        orderDate: "Order Date",
+        contractNo: "Contract No",
+        signDate: "Switch Contract Sign Date",
+        end: "Contract End Date",
+        duration: "Duration",
+        start: "Work Start Date",
+        deliveryDate: "Delivery Date",
+        inspectionDate: "Inspection Date",
+        contractor: "Contractor",
+        supervisor: "Supervisor",
+        comm1: "Committee 1",
+        comm2: "Committee 2",
+        comm3: "Committee 3",
+        status: "Status",
+        budgetSource: "Budget Source",
+        boqLink: "BOQ Link"
+    };
+
+    let projects = [];
+    let searchTerm = "";
+    let currentFilterType = 'active';
+
+    // --- 2. INITIALIZATION ---
+    async function init() {
+        try {
+            document.getElementById('loader').style.display = 'flex';
+
+            const response = await fetch(API_URL + '?t=' + new Date().getTime());
+            const result = await response.json();
+
+            let rows = [];
+            if (result.status && result.status !== 'success' && !result.projects) throw new Error(result.message);
+
+            if (result.projects) {
+                rows = result.projects;
+                if (result.options) populateDatalists(result.options, result.projects);
+            }
+
+            // Map Data Objects (Using COLUMN_MAP keys)
+            projects = rows.map((r, index) => {
+                const id = r._rowIndex ? r._rowIndex : (r.id !== undefined ? r.id : index);
+
+                let rawStatus = r[COLUMN_MAP.status] || "";
+                let isDone = rawStatus.includes('100') || rawStatus.includes('เสร็จ') || rawStatus.includes('ส่งมอบ');
+
+                return {
+                    id: id,
+                    title: r[COLUMN_MAP.title] || "",
+                    desc: r[COLUMN_MAP.desc] || "",
+                    budget: parseInt((r[COLUMN_MAP.budget] || "0").toString().replace(/,/g, '')),
+                    orderNo: String(r[COLUMN_MAP.orderNo] || "-"),
+                    orderDate: convertDate(r[COLUMN_MAP.orderDate]),
+                    contractNo: String(r[COLUMN_MAP.contractNo] || "-"),
+                    signDate: convertDate(r[COLUMN_MAP.signDate]),
+                    start: convertDate(r[COLUMN_MAP.start]),
+                    end: convertDate(r[COLUMN_MAP.end]),
+                    deliveryDate: convertDate(r[COLUMN_MAP.deliveryDate]),
+                    duration: r[COLUMN_MAP.duration] || "-",
+                    inspectionDate: convertDate(r[COLUMN_MAP.inspectionDate]),
+                    contractor: r[COLUMN_MAP.contractor] || "-",
+                    supervisor: r[COLUMN_MAP.supervisor] || "-",
+                    committee: [r[COLUMN_MAP.comm1], r[COLUMN_MAP.comm2], r[COLUMN_MAP.comm3]].filter(Boolean),
+                    status: isDone ? 'done' : 'active',
+                    statusText: rawStatus || (isDone ? "เสร็จสิ้น" : "กำลังดำเนินการ"),
+                    budgetSource: r[COLUMN_MAP.budgetSource] || "",
+                    boqLink: r[COLUMN_MAP.boqLink] || "",
+                    rawObj: r
+                };
+            });
+
+            // Sort: "กำลังดำเนินการ" First, then Sign Date Desc
+            projects.sort((a, b) => {
+                const scoreA = a.statusText === 'กำลังดำเนินการ' ? 1 : 0;
+                const scoreB = b.statusText === 'กำลังดำเนินการ' ? 1 : 0;
+                if (scoreA !== scoreB) return scoreB - scoreA;
+                const dateA = a.signDate || "";
+                const dateB = b.signDate || "";
+                if (dateA > dateB) return -1;
+                if (dateA < dateB) return 1;
+                return b.id - a.id;
+            });
+
+            renderProjects(currentFilterType);
+            document.getElementById('loader').style.display = 'none';
+
+        } catch (err) {
+            alert('โหลดข้อมูลไม่สำเร็จ: ' + err.message);
+            console.error(err);
+            document.getElementById('loader').style.display = 'none';
+        }
+    }
+
+    // --- 3. RENDERING ---
+    function renderProjects(filterType) {
+        currentFilterType = filterType;
+        const list = document.getElementById('projectList');
+        list.innerHTML = '';
+
+        let totalB = 0, countAll = 0, countActive = 0;
+
+        projects.forEach((p) => {
+            totalB += p.budget;
+            countAll++;
+            if (p.status === 'active') countActive++;
+
+            if (filterType === 'active' && p.status !== 'active') return;
+            if (searchTerm !== "" && !p.title.toLowerCase().includes(searchTerm)) return;
+
+            const progress = calculateProgress(p.signDate, p.end, p.statusText);
+
+            const html = `
+        <div class="project-card ${p.status === 'active' ? 'status-active' : 'status-done'}" onclick="openModal('${p.id}')">
+            <div class="card-header">
+                <div class="card-title">${p.title}</div>
+                <div class="header-actions">
+                    <button class="admin-icon-btn edit-action" onclick="openFormModal('edit', '${p.id}'); event.stopPropagation();">edit</button>
+                    <button class="admin-icon-btn delete-action" onclick="deleteProject('${p.id}'); event.stopPropagation();">delete</button>
+                    <span class="status-badge ${p.statusText === 'รอดำเนินการ' ? 'badge-pending' : (p.status === 'active' ? 'badge-active' : 'badge-done')}">${p.statusText}</span>
+                </div>
+            </div>
+            <div style="font-size: 0.85rem; line-height: 1.5; color: #333; margin-top: 5px; margin-bottom: 2px; padding-right: 10px;">${p.desc}</div>
+            <div class="card-meta">
+                <span>งบที่ใช้ไป: <strong>${p.budget.toLocaleString()}</strong> <small style="color:#666; font-weight:normal;">${p.budgetSource ? `(${p.budgetSource})` : ''}</small></span>
+                <span style="color:${p.status === 'active' ? 'var(--md-sys-color-secondary)' : '#757575'}">${progress}%</span>
+            </div>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" style="width: ${progress}%; background: ${p.status === 'active' ? 'var(--md-sys-color-secondary)' : 'var(--md-sys-color-primary)'}"></div>
+            </div>
+            ${p.contractor && p.contractor !== "-" ? `
+            <div class="card-meta">
+                <small style="display:flex; align-items:center; gap:5px;"><i class="fas fa-hard-hat" style="font-size:0.8em"></i> ${p.contractor}</small>
+            </div>` : ''}
+        </div>`;
+            list.innerHTML += html;
+        });
+
+        document.getElementById('totalCount').innerText = countAll;
+        document.getElementById('activeCount').innerText = countActive;
+        document.getElementById('totalBudget').innerText = (totalB / 1000000).toFixed(2);
+    }
+
+    // --- 4. DATA LOGIC (CRUD) ---
+    async function handleFormSubmit(e) {
+        e.preventDefault();
+        const btn = document.getElementById('saveBtn');
+        btn.disabled = true;
+        btn.innerText = "กำลังบันทึก...";
+
+        const id = document.getElementById('f-id').value;
+        const isEdit = id !== "";
+
+        // Construct Data Object using COLUMN_MAP keys
+        const newData = {};
+
+        newData[COLUMN_MAP.title] = document.getElementById('f-title').value;
+        newData[COLUMN_MAP.desc] = document.getElementById('f-desc').value;
+        newData[COLUMN_MAP.budget] = document.getElementById('f-budget').value;
+
+        newData[COLUMN_MAP.orderNo] = document.getElementById('f-order-no').value;
+        newData[COLUMN_MAP.orderDate] = formatDateForSheet(document.getElementById('f-order-date').value);
+
+        newData[COLUMN_MAP.contractNo] = document.getElementById('f-contract-no').value;
+        newData[COLUMN_MAP.signDate] = formatDateForSheet(document.getElementById('f-sign-date').value);
+        newData[COLUMN_MAP.end] = formatDateForSheet(document.getElementById('f-end').value);
+        newData[COLUMN_MAP.duration] = document.getElementById('f-duration').value;
+
+        newData[COLUMN_MAP.start] = formatDateForSheet(document.getElementById('f-start').value);
+        newData[COLUMN_MAP.deliveryDate] = formatDateForSheet(document.getElementById('f-delivery-date').value);
+        newData[COLUMN_MAP.inspectionDate] = formatDateForSheet(document.getElementById('f-inspection-date').value);
+
+        newData[COLUMN_MAP.contractor] = document.getElementById('f-contractor').value;
+        newData[COLUMN_MAP.supervisor] = document.getElementById('f-supervisor').value;
+
+        newData[COLUMN_MAP.comm1] = document.getElementById('f-comm1').value;
+        newData[COLUMN_MAP.comm2] = document.getElementById('f-comm2').value;
+        newData[COLUMN_MAP.comm3] = document.getElementById('f-comm3').value;
+
+        newData[COLUMN_MAP.status] = document.getElementById('f-status').value;
+        newData[COLUMN_MAP.budgetSource] = document.getElementById('f-budget-source').value;
+        newData[COLUMN_MAP.boqLink] = document.getElementById('f-boq-link').value;
+
+        const payload = {
+            action: isEdit ? 'update' : 'create',
+            id: id,
+            data: newData
+        };
+
+        try {
+            await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            });
+
+            alert('บันทึกสำเร็จ');
+            closeModalDirect('form-modal');
+            init(); // Reload data
+        } catch (err) {
+            alert('เกิดข้อผิดพลาด: ' + err);
+        } finally {
+            btn.disabled = false;
+            btn.innerText = "บันทึกข้อมูล";
+        }
+    }
+
+    async function deleteProject(id) {
+        if (!confirm('ยืนยันที่จะลบโครงการนี้?')) return;
+
+        try {
+            document.getElementById('loader').style.display = 'flex';
+            await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'delete', id: id })
+            });
+            alert('ลบข้อมูลเรียบร้อย');
+            init();
+        } catch (err) {
+            alert('ลบไม่สำเร็จ: ' + err);
+            document.getElementById('loader').style.display = 'none';
+        }
+    }
+
+    // Initialize on load
+    init();
+</script>
