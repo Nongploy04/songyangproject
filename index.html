@@ -1524,8 +1524,9 @@
         function getProjectType(title) {
             const t = title.toLowerCase();
 
-            // Priority 1: Building (Includes "อาคาร", "โรง", "ศาลา", "บ้าน", "ศูนย์")
-            if (t.includes('อาคาร') || t.includes('โรง') || t.includes('ศาลา') || t.includes('บ้าน') || t.includes('ศูนย์')) return 'building';
+            // Priority 1: Building (Specific building types, avoid general location terms like "บ้าน")
+            // Removed "โรง" because it matches "โครงการ", Removed "บ้าน" because it matches "หมู่บ้าน"
+            if (t.includes('อาคาร') || t.includes('ศาลา') || t.includes('หอประชุม') || t.includes('ศูนย์พัฒนา') || t.includes('เมรุ') || t.includes('ห้องน้ำ')) return 'building';
 
             // Priority 2: Asphalt (Includes "แอสฟัลต์", "แอสฟัลท์", "ลาดยาง")
             if (t.includes('แอสฟัล') || t.includes('ลาดยาง') || t.includes('asphalt')) return 'asphalt';
