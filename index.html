@@ -238,6 +238,34 @@
             font-size: 1.2rem;
         }
 
+        /* --- Filter Chips --- */
+        .filter-chips-container {
+            display: flex;
+            gap: 8px;
+            padding: 0 20px 15px;
+            overflow-x: auto;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-chip {
+            padding: 6px 12px;
+            border-radius: 20px;
+            border: 1px solid #ddd;
+            background: #fff;
+            color: #555;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Sarabun', sans-serif;
+        }
+
+        .filter-chip.active {
+            background: var(--md-sys-color-secondary);
+            color: white;
+            border-color: var(--md-sys-color-secondary);
+        }
+
         /* --- List & Cards --- */
         .container {
             padding: 5px 20px 100px;
@@ -600,7 +628,8 @@
         }
 
         .form-input,
-        .form-textarea {
+        .form-textarea,
+        .form-select {
             width: 100%;
             padding: 12px 15px;
             border: 1px solid #ccc;
@@ -608,6 +637,7 @@
             font-family: 'Sarabun', sans-serif;
             font-size: 1rem;
             box-sizing: border-box;
+            background-color: white;
         }
 
         .form-input:focus,
@@ -709,6 +739,14 @@
             <input type="text" id="searchInput" class="search-input" placeholder="ค้นหาดูโครงการ..."
                 oninput="handleSearch(this.value)">
         </div>
+    </div>
+
+    <div class="filter-chips-container">
+        <button class="filter-chip active" onclick="handleChipFilter(this, 'all')">ทั้งหมด</button>
+        <button class="filter-chip" onclick="handleChipFilter(this, 'asphalt')">ลาดยาง</button>
+        <button class="filter-chip" onclick="handleChipFilter(this, 'concrete')">คอนกรีต</button>
+        <button class="filter-chip" onclick="handleChipFilter(this, 'gravel')">หินคลุก</button>
+        <button class="filter-chip" onclick="handleChipFilter(this, 'soil')">ดิน/อื่นๆ</button>
     </div>
 
     <div class="container" id="projectList">
@@ -852,6 +890,16 @@
                     <input type="text" id="f-title" class="form-input" required>
                 </div>
                 <div class="form-group">
+                    <label class="form-label">ประเภทโครงการ</label>
+                    <select id="f-type" class="form-select">
+                        <option value="">- เลือกประเภท -</option>
+                        <option value="asphalt">ลาดยาง (Asphalt)</option>
+                        <option value="concrete">คอนกรีต (Concrete)</option>
+                        <option value="gravel">หินคลุก/ลูกรัง (Gravel)</option>
+                        <option value="soil">ดิน/อื่นๆ (Soil/Others)</option>
+                    </select>
+                </div>
+                <div class="form-group">
                     <label class="form-label">รายละเอียด/ปริมาณงาน</label>
                     <textarea id="f-desc" class="form-textarea" rows="2"></textarea>
                 </div>
@@ -972,7 +1020,7 @@
 
     <script>
         // --- 1. CONFIGURATION ---
-        const API_URL = 'https://script.google.com/macros/s/AKfycbxd0xC2SbmoBhkEoDCNszEF3eRPeeZA0LQshTOewXcVLad_YquleDJ5-nmpGeHISIKs/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbyncq5e4UZjUr3hiOJhsjZ3_zHYrjvmjsuZrD7KyMPhdktlIP7_7aDDrxam-QyBZEMz/exec';
 
         // --- NEW: Handle Image Upload with Resizing ---
         async function handleImageUpload(input) {
@@ -1087,7 +1135,8 @@
             comm3: "Committee 3",
             status: "Status",
             budgetSource: "Budget Source",
-            boqLink: "BOQ Link"
+            boqLink: "BOQ Link",
+            type: "Project Type"
         };
 
         let projects = [];
@@ -1142,6 +1191,7 @@
                         statusText: rawStatus || (isDone ? "เสร็จสิ้น" : "กำลังดำเนินการ"),
                         budgetSource: r[COLUMN_MAP.budgetSource] || "",
                         boqLink: r[COLUMN_MAP.boqLink] || "",
+                        type: r[COLUMN_MAP.type] || "", // New Field
                         rawObj: r // Keep original object for editing
                     };
                 });
@@ -1192,6 +1242,12 @@
 
                 if (filterType === 'active' && p.status !== 'active') return;
                 if (searchTerm !== "" && !p.title.toLowerCase().includes(searchTerm)) return;
+
+                // Chip Filter: ใช้ค่า type จากคอลัมน์จริง
+                if (currentChipFilter !== 'all') {
+                    const projectType = p.type || getProjectType(p.title); // Fallback ถ้ายังไม่ได้ migrate
+                    if (projectType !== currentChipFilter) return;
+                }
 
                 const progress = calculateProgress(p.signDate, p.end, p.statusText);
 
@@ -1265,6 +1321,7 @@
             newData[COLUMN_MAP.status] = document.getElementById('f-status').value;
             newData[COLUMN_MAP.budgetSource] = document.getElementById('f-budget-source').value;
             newData[COLUMN_MAP.boqLink] = document.getElementById('f-boq-link').value;
+            newData[COLUMN_MAP.type] = document.getElementById('f-type').value;
 
             // Preserve other fields if editing? Not easy with Object mapping unless we merge.
             // But since we write by *Keys*, we don't need to preserve unknowns (they won't be touched by the partial update in doPost).
@@ -1359,6 +1416,33 @@
             const d = new Date(str);
             if (isNaN(d)) return str;
             return d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        let currentChipFilter = 'all';
+
+        function handleChipFilter(btn, type) {
+            // UI
+            document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // Logic
+            currentChipFilter = type;
+            renderProjects(currentFilterType);
+        }
+
+        function getProjectType(title) {
+            const t = title.toLowerCase();
+            // Priority 1: Asphalt (Includes "แอสฟัลต์", "แอสฟัลท์", "ลาดยาง")
+            if (t.includes('แอสฟัล') || t.includes('ลาดยาง') || t.includes('asphalt')) return 'asphalt';
+
+            // Priority 2: Concrete (Includes "คอนกรีต", "คสล", "ค.ส.ล.")
+            if (t.includes('คอนกรีต') || t.includes('คสล') || t.includes('ค.ส.ล.')) return 'concrete';
+
+            // Priority 3: Gravel/Soil (Includes "หินคลุก", "ลูกรัง")
+            if (t.includes('หินคลุก') || t.includes('ลูกรัง')) return 'gravel';
+
+            // Priority 4: Soil/Others (Default fallback if others fail, or explicit "ดิน")
+            return 'soil';
         }
 
         // --- 6. UI ACTIONS ---
@@ -1479,6 +1563,7 @@
                 setVal('f-status', r[17]);
                 setVal('f-budget-source', r[18]);
                 setVal('f-boq-link', r[19]);
+                setVal('f-type', r[20]); // Project Type
             } else {
                 title.innerText = "เพิ่มโครงการใหม่";
                 document.getElementById('f-id').value = ""; // Empty for new

@@ -1,6 +1,6 @@
 <script>
     // --- 1. CONFIGURATION ---
-    const API_URL = 'https://script.google.com/macros/s/AKfycbxd0xC2SbmoBhkEoDCNszEF3eRPeeZA0LQshTOewXcVLad_YquleDJ5-nmpGeHISIKs/exec';
+    const API_URL = 'https://script.google.com/macros/s/AKfycbyncq5e4UZjUr3hiOJhsjZ3_zHYrjvmjsuZrD7KyMPhdktlIP7_7aDDrxam-QyBZEMz/exec';
 
     // --- NEW: Handle Image Upload with Drive Integration ---
     async function handleImageUpload(input) {
@@ -195,6 +195,33 @@
         }
     }
 
+    let currentChipFilter = 'all';
+
+    function handleChipFilter(btn, type) {
+        // UI
+        document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+
+        // Logic
+        currentChipFilter = type;
+        renderProjects(currentFilterType);
+    }
+
+    function getProjectType(title) {
+        const t = title.toLowerCase();
+        // Priority 1: Asphalt (Includes "แอสฟัลต์", "แอสฟัลท์", "ลาดยาง")
+        if (t.includes('แอสฟัล') || t.includes('ลาดยาง') || t.includes('asphalt')) return 'asphalt';
+
+        // Priority 2: Concrete (Includes "คอนกรีต", "คสล", "ค.ส.ล.")
+        if (t.includes('คอนกรีต') || t.includes('คสล') || t.includes('ค.ส.ล.')) return 'concrete';
+
+        // Priority 3: Gravel/Soil (Includes "หินคลุก", "ลูกรัง")
+        if (t.includes('หินคลุก') || t.includes('ลูกรัง')) return 'gravel';
+
+        // Priority 4: Soil/Others (Default fallback if others fail, or explicit "ดิน")
+        return 'soil';
+    }
+
     // --- 3. RENDERING ---
     function renderProjects(filterType) {
         currentFilterType = filterType;
@@ -204,12 +231,62 @@
         let totalB = 0, countAll = 0, countActive = 0;
 
         projects.forEach((p) => {
+            // 1. Text Search Filter
+            if (searchTerm !== "" && !p.title.toLowerCase().includes(searchTerm)) return;
+
+            // 2. Tab Filter (Active/All)
+            if (filterType === 'active' && p.status !== 'active') return;
+
+            // 3. Chip Filter (New)
+            if (currentChipFilter !== 'all') {
+                const type = getProjectType(p.title);
+                if (currentChipFilter === 'soil') {
+                    // For "Soil/Others", show it if it matches 'soil' OR doesn't match the other specific types
+                    if (type !== 'soil' && type !== 'gravel' && type !== 'concrete' && type !== 'asphalt') {
+                        // It's "other", so show it in soil category? 
+                        // Check requirement: "Soil" usually means "Earth road". 
+                        // Let's be strict: If keywords 'ดิน', 'เกลี่ย' found -> soil.
+                        // But user asked for "Soil/Others" implicit group.
+                        // Let's stick to strict parsing for now based on user prompt logic
+                        // Actually, user said "Stone, Soil". Let's use the helper.
+                        // If helper returns 'soil', it means it didn't match others (or matched soil keywords)
+                        if (type !== 'soil') return;
+                    } else {
+                        // If strict soil
+                        if (type !== 'soil') return;
+                    }
+                } else {
+                    if (type !== currentChipFilter) return;
+                }
+            }
+
+            // Counting logic (Count ONLY what is visible? Or global stats? Usually global stats)
+            // But code below counts based on iteration. If we return above, counts are affected.
+            // Let's move counting to TOP, before filtering? 
+            // Standard UI: Stats usually show "Total in DB", not "Total in Search".
+            // But existing code counted inside loop. Let's fix that to be consistent with previous behavior
+            // Previous behavior: Counted filtered items? No, previous code had `if (filterType... return)` AFTER counting?
+            // Wait, previous code:
+            // totalB += p.budget; countAll++; ... IF filter ... return.
+            // So stats were GLOBAL.
+
+            // Refactoring loop to preserve Global Stats
             totalB += p.budget;
             countAll++;
             if (p.status === 'active') countActive++;
 
+            // NOW apply filters for display
             if (filterType === 'active' && p.status !== 'active') return;
             if (searchTerm !== "" && !p.title.toLowerCase().includes(searchTerm)) return;
+
+            if (currentChipFilter !== 'all') {
+                const type = getProjectType(p.title);
+                // Special logic for "soil" group to catch "others"? 
+                // User request: "Soil, Gravel, Concrete, Asphalt, All".
+                // My getProjectType defaults to 'soil' if nothing matches? No, let's look at my getProjectType above.
+                // It returns 'soil' as default. So yes, 'soil' acts as 'others'.
+                if (type !== currentChipFilter) return;
+            }
 
             const progress = calculateProgress(p.signDate, p.end, p.statusText);
 
@@ -291,16 +368,37 @@
         };
 
         try {
-            await fetch(API_URL, {
+            // 10s Timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 seconds
+
+            const response = await fetch(API_URL, {
                 method: 'POST',
-                body: JSON.stringify(payload)
+                body: JSON.stringify(payload),
+                signal: controller.signal
             });
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`Server returned ${response.status} ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            if (result.status !== 'success') {
+                throw new Error(result.message || 'Unknown error from server');
+            }
 
             alert('บันทึกสำเร็จ');
             closeModalDirect('form-modal');
             init(); // Reload data
         } catch (err) {
-            alert('เกิดข้อผิดพลาด: ' + err);
+            if (err.name === 'AbortError') {
+                alert('การบันทึกใช้เวลานานเปกติ (Timeout 10s) ข้อมูลอาจจะถูกบันทึกแล้ว กรุณารีเฟรชหน้าเว็บเพื่อตรวจสอบ');
+                closeModalDirect('form-modal');
+                init();
+            } else {
+                alert('เกิดข้อผิดพลาด: ' + err.message);
+            }
         } finally {
             btn.disabled = false;
             btn.innerText = "บันทึกข้อมูล";

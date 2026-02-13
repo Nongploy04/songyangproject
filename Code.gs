@@ -1,11 +1,11 @@
 // Google Apps Script Backend with Drive Integration
 // This file should be uploaded to Google Apps Script
 
-const SHEET_ID = 'YOUR_SHEET_ID_HERE'; // Replace with your Google Sheet ID
+const SHEET_ID = '1qi2WNGDguZtkEtCU2FzzEF_jiVLN82yf23Hbv2H2weA';
 const DRIVE_FOLDER_ID = '1ODlt5J0QLtmUQwzxte2_5n5BWy8Xefky'; // Project Images folder (Public)
 
 function doGet(e) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Projects');
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Sheet1');
   const optionsSheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Options');
   
   const data = sheet.getDataRange().getValues();
@@ -55,6 +55,10 @@ function doPost(e) {
       return updateProject(payload);
     } else if (action === 'delete') {
       return deleteProject(payload);
+    } else if (action === 'migrate') {
+      // One-time migration trigger
+      const result = migrateProjectTypes();
+      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
     }
     
     return ContentService.createTextOutput(JSON.stringify({
@@ -193,41 +197,159 @@ function parseImageFromDrive(payload) {
 
 // Create new project
 function createProject(payload) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Projects');
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  
-  const newRow = headers.map(header => payload.data[header] || "");
-  sheet.appendRow(newRow);
-  
-  return ContentService.createTextOutput(JSON.stringify({
-    status: 'success'
-  })).setMimeType(ContentService.MimeType.JSON);
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000); // Wait up to 10s for other processes
+  } catch (e) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: 'Server is busy, please try again.'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  try {
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Sheet1');
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    
+    // Create row array based on headers
+    const newRow = headers.map(header => payload.data[header] || "");
+    
+    // Append single row
+    sheet.appendRow(newRow);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success'
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // Update existing project
 function updateProject(payload) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Projects');
-  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const rowIndex = parseInt(payload.id);
-  
-  headers.forEach((header, colIndex) => {
-    if (payload.data[header] !== undefined) {
-      sheet.getRange(rowIndex, colIndex + 1).setValue(payload.data[header]);
-    }
-  });
-  
-  return ContentService.createTextOutput(JSON.stringify({
-    status: 'success'
-  })).setMimeType(ContentService.MimeType.JSON);
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (e) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: 'Server is busy, please try again.'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  try {
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Sheet1');
+    const lastCol = sheet.getLastColumn();
+    const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    const rowIndex = parseInt(payload.id);
+    
+    // Optimize: Read entire row, update in memory, write back once
+    const range = sheet.getRange(rowIndex, 1, 1, lastCol);
+    const values = range.getValues()[0];
+    
+    headers.forEach((header, colIndex) => {
+      if (payload.data[header] !== undefined) {
+        values[colIndex] = payload.data[header];
+      }
+    });
+    
+    range.setValues([values]);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success'
+    })).setMimeType(ContentService.MimeType.JSON);
+    
+  } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // Delete project
 function deleteProject(payload) {
-  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Projects');
-  const rowIndex = parseInt(payload.id);
-  sheet.deleteRow(rowIndex);
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (e) {
+     return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: 'Server is busy'
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  try {
+    const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Sheet1');
+    const rowIndex = parseInt(payload.id);
+    sheet.deleteRow(rowIndex);
+    
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'success'
+    })).setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// --- MIGRATION UTILS ---
+function migrateProjectTypes() {
+  const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Sheet1');
+  const lastCol = sheet.getLastColumn();
+  const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
   
-  return ContentService.createTextOutput(JSON.stringify({
-    status: 'success'
-  })).setMimeType(ContentService.MimeType.JSON);
+  // check if "Project Type" exists
+  let typeColIndex = headers.indexOf("Project Type");
+  
+  // If not exists, create it
+  if (typeColIndex === -1) {
+    sheet.getRange(1, lastCol + 1).setValue("Project Type");
+    typeColIndex = lastCol; // 0-based index of new col
+  }
+  
+  const dataRange = sheet.getDataRange();
+  const data = dataRange.getValues();
+  // Get Name column index (Assume "Project Name" or first column)
+  // Based on index.html mapping: title: "Project Name"
+  const nameColIndex = headers.indexOf("Project Name");
+  if (nameColIndex === -1) return "Project Name header not found";
+  
+  const updates = [];
+  
+  // Iterate rows (skip header)
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const name = row[nameColIndex].toString().toLowerCase();
+    let type = "soil"; // Default
+    
+    // Keyword Logic (Same as frontend)
+    if (name.includes('แอสฟัล') || name.includes('ลาดยาง') || name.includes('asphalt')) {
+        type = 'asphalt';
+    } else if (name.includes('คอนกรีต') || name.includes('คสล') || name.includes('ค.ส.ล.')) {
+        type = 'concrete';
+    } else if (name.includes('หินคลุก') || name.includes('ลูกรัง')) {
+        type = 'gravel';
+    }
+    
+    // Only update if empty? Or overwrite all to be safe? 
+    // User asked to backfill. Let's overwrite to ensure consistency.
+    // We need to set the value in the correct column.
+    // Efficient way: collect all types and write one column.
+    updates.push([type]);
+  }
+  
+  // Write back to Project Type column
+  if (updates.length > 0) {
+    sheet.getRange(2, typeColIndex + 1, updates.length, 1).setValues(updates);
+  }
+  
+  return { status: 'success', updated: updates.length };
 }
