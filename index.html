@@ -1573,12 +1573,14 @@
             const supervisorNode = document.getElementById('m-supervisor');
             if (supervisorNode) {
                 const names = (p.supervisor || "").split('\n').filter(Boolean);
+                const roleStyle = 'display:block; font-size: 0.8rem; color: #666; margin-top: 2px; line-height: 1.2;';
                 if (names.length === 0) {
                     supervisorNode.innerText = "-";
                 } else if (names.length === 1) {
-                    supervisorNode.innerText = names[0] + " (ผู้ควบคุมงาน)";
+                    supervisorNode.innerHTML = `${names[0]}<span style="${roleStyle}">ผู้ควบคุมงาน</span>`;
                 } else {
-                    supervisorNode.innerHTML = names[0] + " (หัวหน้าผู้ควบคุมงาน)<br>" + names[1] + " (ผู้ช่วยควบคุมงาน)";
+                    supervisorNode.innerHTML = `${names[0]}<span style="${roleStyle}">หัวหน้าผู้ควบคุมงาน</span>` +
+                        `<div style="margin-top:8px;">${names[1]}<span style="${roleStyle}">ผู้ช่วยควบคุมงาน</span></div>`;
                 }
             }
 
