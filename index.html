@@ -1143,79 +1143,103 @@
         let searchTerm = "";
         let currentFilterType = 'active';
 
-        // --- 2. INITIALIZATION ---
+        // --- 2. INITIALIZATION & CACHING ---
         async function init() {
-            try {
+            // 1. ลองโหลดจาก Cache ก่อน (ถ้ามี) เพื่อความรวดเร็วแบบ 0 วินาที
+            const cache = localStorage.getItem('projects_cache');
+            if (cache) {
+                try {
+                    const result = JSON.parse(cache);
+                    processMainData(result);
+                    // ถ้ามีแคชแล้ว ให้ซ่อน loader ไปก่อนเลยเพื่อให้เห็นข้อมูลทันที
+                    document.getElementById('loader').style.display = 'none';
+                    console.log('Loaded from LocalStorage cache');
+                } catch (e) {
+                    console.error('Cache parse error', e);
+                }
+            } else {
+                // ถ้าไม่มีแคชเลย ค่อยโชว์ loader แบบเต็มรูปแบบ
                 document.getElementById('loader').style.display = 'flex';
+            }
 
+            // 2. ดึงข้อมูลใหม่จาก Server ในพื้นหลัง
+            try {
                 const response = await fetch(API_URL + '?t=' + new Date().getTime());
                 const result = await response.json();
 
-                let rows = [];
-                if (result.status && result.status !== 'success' && !result.projects) throw new Error(result.message);
+                if (result.status === 'success' && result.projects) {
+                    // เก็บข้อมูลลง Cache สำหรับครั้งหน้า
+                    localStorage.setItem('projects_cache', JSON.stringify(result));
 
-                if (result.projects) {
-                    rows = result.projects;
-                    if (result.options) populateDatalists(result.options, result.projects);
+                    // ประมวลผลและแสดงผลข้อมูลล่าสุด
+                    processMainData(result);
+                } else if (result.status === 'error') {
+                    throw new Error(result.message);
                 }
 
-                // Map Data Objects (Using COLUMN_MAP keys)
-                projects = rows.map((r, index) => {
-                    // r is now an object { "ชื่อโครงการ": "...", ... }
-                    // We map it to our internal structure
-
-                    // Fallback for ID: usage _rowIndex from server if available, else index
-                    const id = r._rowIndex ? r._rowIndex : (r.id !== undefined ? r.id : index);
-
-                    let rawStatus = r[COLUMN_MAP.status] || "";
-                    let isDone = rawStatus.includes('100') || rawStatus.includes('เสร็จ') || rawStatus.includes('ส่งมอบ');
-
-                    return {
-                        id: id,
-                        title: r[COLUMN_MAP.title] || "",
-                        desc: r[COLUMN_MAP.desc] || "",
-                        budget: parseInt((r[COLUMN_MAP.budget] || "0").toString().replace(/,/g, '')),
-                        orderNo: String(r[COLUMN_MAP.orderNo] || "-"),
-                        orderDate: convertDate(r[COLUMN_MAP.orderDate]),
-                        contractNo: String(r[COLUMN_MAP.contractNo] || "-"),
-                        signDate: convertDate(r[COLUMN_MAP.signDate]),
-                        start: convertDate(r[COLUMN_MAP.start]),
-                        end: convertDate(r[COLUMN_MAP.end]),
-                        deliveryDate: convertDate(r[COLUMN_MAP.deliveryDate]),
-                        duration: r[COLUMN_MAP.duration] || "-",
-                        inspectionDate: convertDate(r[COLUMN_MAP.inspectionDate]),
-                        contractor: r[COLUMN_MAP.contractor] || "-",
-                        supervisor: r[COLUMN_MAP.supervisor] || "-",
-                        committee: [r[COLUMN_MAP.comm1], r[COLUMN_MAP.comm2], r[COLUMN_MAP.comm3]].filter(Boolean),
-                        status: isDone ? 'done' : 'active',
-                        statusText: rawStatus || (isDone ? "เสร็จสิ้น" : "กำลังดำเนินการ"),
-                        budgetSource: r[COLUMN_MAP.budgetSource] || "",
-                        boqLink: r[COLUMN_MAP.boqLink] || "",
-                        type: r[COLUMN_MAP.type] || "", // New Field
-                        rawObj: r // Keep original object for editing
-                    };
-                });
-
-                // Sort: "กำลังดำเนินการ" First, then Sign Date Desc
-                projects.sort((a, b) => {
-                    const scoreA = a.statusText === 'กำลังดำเนินการ' ? 1 : 0;
-                    const scoreB = b.statusText === 'กำลังดำเนินการ' ? 1 : 0;
-                    if (scoreA !== scoreB) return scoreB - scoreA;
-                    const dateA = a.signDate || "";
-                    const dateB = b.signDate || "";
-                    if (dateA > dateB) return -1;
-                    if (dateA < dateB) return 1;
-                    return b.id - a.id;
-                });
-
-                renderProjects(currentFilterType);
                 document.getElementById('loader').style.display = 'none';
-
             } catch (err) {
-                alert('โหลดข้อมูลไม่สำเร็จ: ' + err.message);
-                console.error(err);
+                console.error('Fetch error:', err);
+                // ถ้าดึงข้อมูลไม่ได้ และไม่มีแคชเลย ค่อยแจ้งเตือน
+                if (!localStorage.getItem('projects_cache')) {
+                    alert('โหลดข้อมูลไม่สำเร็จ: ' + err.message);
+                }
                 document.getElementById('loader').style.display = 'none';
             }
+        }
+
+        function processMainData(result) {
+            if (!result || !result.projects) return;
+
+            const rows = result.projects;
+            if (result.options) populateDatalists(result.options, rows);
+
+            // Map Data Objects (Using COLUMN_MAP keys)
+            projects = rows.map((r, index) => {
+                const id = r._rowIndex ? r._rowIndex : (r.id !== undefined ? r.id : index);
+
+                let rawStatus = r[COLUMN_MAP.status] || "";
+                let isDone = rawStatus.includes('100') || rawStatus.includes('เสร็จ') || rawStatus.includes('ส่งมอบ');
+
+                return {
+                    id: id,
+                    title: r[COLUMN_MAP.title] || "",
+                    desc: r[COLUMN_MAP.desc] || "",
+                    budget: parseInt((r[COLUMN_MAP.budget] || "0").toString().replace(/,/g, '')),
+                    orderNo: String(r[COLUMN_MAP.orderNo] || "-"),
+                    orderDate: convertDate(r[COLUMN_MAP.orderDate]),
+                    contractNo: String(r[COLUMN_MAP.contractNo] || "-"),
+                    signDate: convertDate(r[COLUMN_MAP.signDate]),
+                    start: convertDate(r[COLUMN_MAP.start]),
+                    end: convertDate(r[COLUMN_MAP.end]),
+                    deliveryDate: convertDate(r[COLUMN_MAP.deliveryDate]),
+                    duration: r[COLUMN_MAP.duration] || "-",
+                    inspectionDate: convertDate(r[COLUMN_MAP.inspectionDate]),
+                    contractor: r[COLUMN_MAP.contractor] || "-",
+                    supervisor: r[COLUMN_MAP.supervisor] || "-",
+                    committee: [r[COLUMN_MAP.comm1], r[COLUMN_MAP.comm2], r[COLUMN_MAP.comm3]].filter(Boolean),
+                    status: isDone ? 'done' : 'active',
+                    statusText: rawStatus || (isDone ? "เสร็จสิ้น" : "กำลังดำเนินการ"),
+                    budgetSource: r[COLUMN_MAP.budgetSource] || "",
+                    boqLink: r[COLUMN_MAP.boqLink] || "",
+                    type: r[COLUMN_MAP.type] || "",
+                    rawObj: r
+                };
+            });
+
+            // Sort: "กำลังดำเนินการ" First, then Sign Date Desc
+            projects.sort((a, b) => {
+                const scoreA = a.statusText === 'กำลังดำเนินการ' ? 1 : 0;
+                const scoreB = b.statusText === 'กำลังดำเนินการ' ? 1 : 0;
+                if (scoreA !== scoreB) return scoreB - scoreA;
+                const dateA = a.signDate || "";
+                const dateB = b.signDate || "";
+                if (dateA > dateB) return -1;
+                if (dateA < dateB) return 1;
+                return b.id - a.id;
+            });
+
+            renderProjects(currentFilterType);
         }
 
         // --- 3. RENDERING --- (Unchanged, skipping re-definition for brevity if possible, but replace_file needs contiguous)
@@ -1341,6 +1365,7 @@
                 });
 
                 alert('บันทึกสำเร็จ');
+                localStorage.removeItem('projects_cache'); // ล้างแคชเพื่อให้โหลดใหม่ทันที
                 closeModalDirect('form-modal');
                 init(); // Reload data
             } catch (err) {
@@ -1361,6 +1386,7 @@
                     body: JSON.stringify({ action: 'delete', id: id })
                 });
                 alert('ลบข้อมูลเรียบร้อย');
+                localStorage.removeItem('projects_cache'); // ล้างแคชเพื่อให้โหลดใหม่ทันที
                 init();
             } catch (err) {
                 alert('ลบไม่สำเร็จ: ' + err);
