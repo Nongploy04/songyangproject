@@ -1010,9 +1010,15 @@
                     <label class="form-label">ผู้รับจ้าง</label>
                     <input type="text" id="f-contractor" class="form-input" list="list-contractors">
                 </div>
-                <div class="form-group">
-                    <label class="form-label">ผู้ควบคุมงาน</label>
-                    <input type="text" id="f-supervisor" class="form-input" list="list-supervisors">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <div class="form-group">
+                        <label class="form-label">ผู้ควบคุมงาน</label>
+                        <input type="text" id="f-supervisor" class="form-input" list="list-supervisors">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">ผู้ช่วยควบคุมงาน</label>
+                        <input type="text" id="f-supervisor2" class="form-input" list="list-supervisors">
+                    </div>
                 </div>
                 <!-- Committee: Since it's 3 cols in sheet, let's just use 3 inputs or one textarea. 
                      The sheet has Col 14, 15, 16. Let's provide 3 inputs for clarity or just map to 3 lines in a textarea?
@@ -1368,7 +1374,9 @@
             newData[COLUMN_MAP.inspectionDate] = formatDateForSheet(document.getElementById('f-inspection-date').value);
 
             newData[COLUMN_MAP.contractor] = document.getElementById('f-contractor').value;
-            newData[COLUMN_MAP.supervisor] = document.getElementById('f-supervisor').value;
+            const s1 = document.getElementById('f-supervisor').value.trim();
+            const s2 = document.getElementById('f-supervisor2').value.trim();
+            newData[COLUMN_MAP.supervisor] = [s1, s2].filter(Boolean).join('\n');
 
             newData[COLUMN_MAP.comm1] = document.getElementById('f-comm1').value;
             newData[COLUMN_MAP.comm2] = document.getElementById('f-comm2').value;
@@ -1561,7 +1569,18 @@
             el('m-delivery-date', formatDateDisplay(p.deliveryDate));
             el('m-inspection-date', formatDateDisplay(p.inspectionDate));
 
-            el('m-supervisor', p.supervisor);
+            // Handle Supervisors with Roles
+            const supervisorNode = document.getElementById('m-supervisor');
+            if (supervisorNode) {
+                const names = (p.supervisor || "").split('\n').filter(Boolean);
+                if (names.length === 0) {
+                    supervisorNode.innerText = "-";
+                } else if (names.length === 1) {
+                    supervisorNode.innerText = names[0] + " (ผู้ควบคุมงาน)";
+                } else {
+                    supervisorNode.innerHTML = names[0] + " (หัวหน้าผู้ควบคุมงาน)<br>" + names[1] + " (ผู้ช่วยควบคุมงาน)";
+                }
+            }
 
             // Handle Committee with Line Breaks
             const committeeNode = document.getElementById('m-committee');
@@ -1635,7 +1654,9 @@
                 setDate('f-inspection-date', r[11]);
 
                 setVal('f-contractor', r[12]);
-                setVal('f-supervisor', r[13]);
+                const supervisorParts = (r[13] || "").toString().split('\n');
+                setVal('f-supervisor', supervisorParts[0] || "");
+                setVal('f-supervisor2', supervisorParts[1] || "");
 
                 setVal('f-comm1', r[14]);
                 setVal('f-comm2', r[15]);
