@@ -1523,17 +1523,18 @@
 
         function getProjectType(title) {
             const t = title.toLowerCase();
-            // Priority 1: Asphalt (Includes "แอสฟัลต์", "แอสฟัลท์", "ลาดยาง")
+
+            // Priority 1: Building (Includes "อาคาร", "โรง", "ศาลา", "บ้าน", "ศูนย์")
+            if (t.includes('อาคาร') || t.includes('โรง') || t.includes('ศาลา') || t.includes('บ้าน') || t.includes('ศูนย์')) return 'building';
+
+            // Priority 2: Asphalt (Includes "แอสฟัลต์", "แอสฟัลท์", "ลาดยาง")
             if (t.includes('แอสฟัล') || t.includes('ลาดยาง') || t.includes('asphalt')) return 'asphalt';
 
-            // Priority 2: Concrete (Includes "คอนกรีต", "คสล", "ค.ส.ล.")
+            // Priority 3: Concrete (Includes "คอนกรีต", "คสล", "ค.ส.ล.")
             if (t.includes('คอนกรีต') || t.includes('คสล') || t.includes('ค.ส.ล.')) return 'concrete';
 
-            // Priority 3: Gravel/Soil (Includes "หินคลุก", "ลูกรัง")
+            // Priority 4: Gravel/Soil (Includes "หินคลุก", "ลูกรัง")
             if (t.includes('หินคลุก') || t.includes('ลูกรัง')) return 'gravel';
-
-            // Priority 4: Building (Includes "อาคาร", "โรง", "ศาลา", "บ้าน", "ศูนย์")
-            if (t.includes('อาคาร') || t.includes('โรง') || t.includes('ศาลา') || t.includes('บ้าน') || t.includes('ศูนย์')) return 'building';
 
             // Priority 5: Soil Road/Others (Default fallback if others fail, or explicit "ดิน")
             return 'soil';
@@ -1682,13 +1683,16 @@
             const titleInput = document.getElementById('f-title');
             const typeSelect = document.getElementById('f-type');
             if (titleInput && typeSelect) {
-                // Determine if we should start as 'manual' (if editing and type already exists)
                 let manualType = (typeSelect.value !== "");
 
-                typeSelect.onchange = () => { manualType = true; };
+                typeSelect.onchange = () => {
+                    manualType = true;
+                    console.log("Manual type override activated");
+                };
 
                 titleInput.oninput = () => {
-                    if (!manualType || typeSelect.value === "") {
+                    // Only auto-detect if the user hasn't manually touched the dropdown
+                    if (!manualType) {
                         const detected = getProjectType(titleInput.value);
                         if (detected) typeSelect.value = detected;
                     }
