@@ -737,7 +737,17 @@
         <div class="search-box">
             <span class="material-symbols-rounded search-icon">search</span>
             <input type="text" id="searchInput" class="search-input" placeholder="ค้นหาดูโครงการ..."
-                oninput="handleSearch(this.value)">
+                oninput="handleSearch(this.value)" list="search-suggestions">
+            <datalist id="search-suggestions">
+                <option value="หมู่ที่ 1">
+                <option value="หมู่ที่ 2">
+                <option value="หมู่ที่ 3">
+                <option value="หมู่ที่ 4">
+                <option value="หมู่ที่ 5">
+                <option value="หมู่ที่ 6">
+                <option value="หมู่ที่ 7">
+                <option value="หมู่ที่ 8">
+            </datalist>
         </div>
     </div>
 
