@@ -227,6 +227,12 @@ function createProject(payload) {
     const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Sheet1');
     const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     
+    // Safety check: If "Project Type" column is missing, add it
+    if (!headers.includes("Project Type")) {
+      sheet.getRange(1, headers.length + 1).setValue("Project Type");
+      headers.push("Project Type");
+    }
+
     // Create row array based on headers
     const newRow = headers.map(header => payload.data[header] || "");
     
@@ -264,6 +270,14 @@ function updateProject(payload) {
     const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Sheet1');
     const lastCol = sheet.getLastColumn();
     const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    
+    // Safety check: If "Project Type" column is missing, add it
+    if (!headers.includes("Project Type")) {
+      sheet.getRange(1, headers.length + 1).setValue("Project Type");
+      headers.push("Project Type");
+      // Re-read lastCol since we added one
+      lastCol = sheet.getLastColumn();
+    }
     const rowIndex = parseInt(payload.id);
     
     // Optimize: Read entire row, update in memory, write back once

@@ -1677,6 +1677,24 @@
                 title.innerText = "เพิ่มโครงการใหม่";
                 document.getElementById('f-id').value = ""; // Empty for new
             }
+
+            // Logic: Auto-detect type when title changes, BUT only if not manually overridden
+            const titleInput = document.getElementById('f-title');
+            const typeSelect = document.getElementById('f-type');
+            if (titleInput && typeSelect) {
+                // Determine if we should start as 'manual' (if editing and type already exists)
+                let manualType = (typeSelect.value !== "");
+
+                typeSelect.onchange = () => { manualType = true; };
+
+                titleInput.oninput = () => {
+                    if (!manualType || typeSelect.value === "") {
+                        const detected = getProjectType(titleInput.value);
+                        if (detected) typeSelect.value = detected;
+                    }
+                };
+            }
+
             showModal('form-modal');
         }
 
