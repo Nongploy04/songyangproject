@@ -190,7 +190,9 @@
             setDate('f-inspection-date', r[COLUMN_MAP.inspectionDate]);
 
             setVal('f-contractor', r[COLUMN_MAP.contractor]);
-            setVal('f-supervisor', r[COLUMN_MAP.supervisor]);
+            const supervisorParts = (r[COLUMN_MAP.supervisor] || "").toString().split('\n');
+            setVal('f-supervisor', supervisorParts[0] || "");
+            setVal('f-supervisor2', supervisorParts[1] || "");
 
             setVal('f-comm1', r[COLUMN_MAP.comm1]);
             setVal('f-comm2', r[COLUMN_MAP.comm2]);
@@ -199,6 +201,7 @@
             setVal('f-status', r[COLUMN_MAP.status]);
             setVal('f-budget-source', r[COLUMN_MAP.budgetSource]);
             setVal('f-boq-link', r[COLUMN_MAP.boqLink]);
+            setVal('f-type', r[COLUMN_MAP.type]); // Project Type
         } else {
             title.innerText = "เพิ่มโครงการใหม่";
             document.getElementById('f-id').value = "";

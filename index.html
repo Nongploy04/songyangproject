@@ -1637,35 +1637,35 @@
                 };
 
                 setVal('f-id', id);
-                setVal('f-title', r[0]);
-                setVal('f-desc', r[1]);
-                setVal('f-budget', r[2]);
+                setVal('f-title', r[COLUMN_MAP.title]);
+                setVal('f-desc', r[COLUMN_MAP.desc]);
+                setVal('f-budget', r[COLUMN_MAP.budget]);
 
-                setVal('f-order-no', r[3]);
-                setDate('f-order-date', r[4]);
+                setVal('f-order-no', r[COLUMN_MAP.orderNo]);
+                setDate('f-order-date', r[COLUMN_MAP.orderDate]);
 
-                setVal('f-contract-no', r[5]);
-                setDate('f-sign-date', r[6]);
-                setDate('f-end', r[7]);
-                setVal('f-duration', r[8]);
+                setVal('f-contract-no', r[COLUMN_MAP.contractNo]);
+                setDate('f-sign-date', r[COLUMN_MAP.signDate]);
+                setDate('f-end', r[COLUMN_MAP.end]);
+                setVal('f-duration', r[COLUMN_MAP.duration]);
 
-                setDate('f-start', r[9]);
-                setDate('f-delivery-date', r[10]);
-                setDate('f-inspection-date', r[11]);
+                setDate('f-start', r[COLUMN_MAP.start]);
+                setDate('f-delivery-date', r[COLUMN_MAP.deliveryDate]);
+                setDate('f-inspection-date', r[COLUMN_MAP.inspectionDate]);
 
-                setVal('f-contractor', r[12]);
-                const supervisorParts = (r[13] || "").toString().split('\n');
+                setVal('f-contractor', r[COLUMN_MAP.contractor]);
+                const supervisorParts = (r[COLUMN_MAP.supervisor] || "").toString().split('\n');
                 setVal('f-supervisor', supervisorParts[0] || "");
                 setVal('f-supervisor2', supervisorParts[1] || "");
 
-                setVal('f-comm1', r[14]);
-                setVal('f-comm2', r[15]);
-                setVal('f-comm3', r[16]);
+                setVal('f-comm1', r[COLUMN_MAP.comm1]);
+                setVal('f-comm2', r[COLUMN_MAP.comm2]);
+                setVal('f-comm3', r[COLUMN_MAP.comm3]);
 
-                setVal('f-status', r[17]);
-                setVal('f-budget-source', r[18]);
-                setVal('f-boq-link', r[19]);
-                setVal('f-type', r[20]); // Project Type
+                setVal('f-status', r[COLUMN_MAP.status]);
+                setVal('f-budget-source', r[COLUMN_MAP.budgetSource]);
+                setVal('f-boq-link', r[COLUMN_MAP.boqLink]);
+                setVal('f-type', r[COLUMN_MAP.type]); // Project Type
             } else {
                 title.innerText = "เพิ่มโครงการใหม่";
                 document.getElementById('f-id').value = ""; // Empty for new
