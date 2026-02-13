@@ -238,6 +238,24 @@
             font-size: 1.2rem;
         }
 
+        .search-clear {
+            position: absolute;
+            right: 15px;
+            color: #5f6368;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 50%;
+            display: none;
+            /* Hidden by default */
+            transition: background 0.2s;
+        }
+
+        .search-clear:hover {
+            background: rgba(0, 0, 0, 0.05);
+            color: #000;
+        }
+
         /* --- Filter Chips --- */
         .filter-chips-container {
             display: flex;
@@ -738,6 +756,8 @@
             <span class="material-symbols-rounded search-icon">search</span>
             <input type="text" id="searchInput" class="search-input" placeholder="ค้นหาดูโครงการ..."
                 oninput="handleSearch(this.value)" list="search-suggestions">
+            <span id="searchClear" class="material-symbols-rounded search-clear"
+                onclick="clearSearchInput()">close</span>
             <datalist id="search-suggestions">
                 <option value="หมู่ที่ 1">
                 <option value="หมู่ที่ 2">
@@ -1660,7 +1680,24 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             event.target.classList.add('active');
         }
-        function handleSearch(val) { searchTerm = val.toLowerCase(); renderProjects(currentFilterType); }
+        function handleSearch(val) {
+            searchTerm = val.toLowerCase().trim();
+
+            // Show/Hide Clear Button
+            const clearBtn = document.getElementById('searchClear');
+            if (clearBtn) {
+                clearBtn.style.display = val.length > 0 ? 'block' : 'none';
+            }
+
+            renderProjects(currentFilterType);
+        }
+
+        function clearSearchInput() {
+            const input = document.getElementById('searchInput');
+            input.value = '';
+            handleSearch('');
+            input.focus();
+        }
 
         function openPdfModal(link) {
             if (!link) return;
