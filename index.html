@@ -1451,29 +1451,52 @@
         }
 
         function convertDate(str) {
-            // Convert Thai date format dd/mm/yyyy to yyyy-mm-dd if needed
-            if (!str || str.includes('-')) return str; // Already yyyy-mm-dd or empty
-            const p = str.split('/');
-            if (p.length === 3) {
-                let y = parseInt(p[2]);
-                if (y > 2400) y -= 543; // Convert BE to CE
-                return `${y}-${p[1].padStart(2, '0')}-${p[0].padStart(2, '0')}`;
+            if (!str) return "";
+            let s = str.toString();
+            // Handle ISO format or BE ISO format (yyyy-mm-dd)
+            if (s.includes('-') && !s.includes('/')) {
+                const parts = s.split('-');
+                if (parts.length === 3) {
+                    let y = parseInt(parts[0]);
+                    if (y > 2400) y -= 543; // Force to CE if BE detected in ISO format
+                    return `${y}-${parts[1].padStart(2, '0')}-${parts[2].substr(0, 2).padStart(2, '0')}`;
+                }
             }
+            // Handle dd/mm/yyyy
+            const p = s.split('/');
+            if (p.length === 3) {
+                let d = p[0].padStart(2, '0');
+                let m = p[1].padStart(2, '0');
+                let y = parseInt(p[2]);
+                if (y > 2400) y -= 543;
+                return `${y}-${m}-${d}`;
+            }
+            const d = new Date(str);
+            if (!isNaN(d)) return d.toISOString().split('T')[0];
             return str;
         }
 
         function formatDateForSheet(isoDate) {
-            // Input yyyy-mm-dd -> Output dd/mm/yyyy
             if (!isoDate) return "";
             const d = new Date(isoDate);
-            return `${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear() + 543}`;
+            if (isNaN(d)) return "";
+            const day = d.getDate().toString().padStart(2, '0');
+            const month = (d.getMonth() + 1).toString().padStart(2, '0');
+            const year = d.getFullYear() + 543;
+            return `${day}/${month}/${year}`;
         }
 
         function formatDateDisplay(str) {
             if (!str || str === "-") return "-";
             const d = new Date(str);
-            if (isNaN(d)) return str;
-            return d.toLocaleDateString('th-TH', { day: '2-digit', month: 'short', year: 'numeric' });
+            if (isNaN(d.getTime())) return str;
+
+            // toLocaleDateString('th-TH') handles adding 543 automatically from AD dates
+            return d.toLocaleDateString('th-TH', {
+                day: 'numeric',
+                month: 'short',
+                year: 'numeric'
+            });
         }
 
         let currentChipFilter = 'all';
@@ -1582,7 +1605,7 @@
             if (mode === 'edit') {
                 title.innerText = "แก้ไขโครงการ";
                 const p = projects.find(x => x.id == id);
-                const r = p.rawRow;
+                const r = p.rawObj; // Fixed: changed rawRow to rawObj
 
                 // Helper to safely set value
                 const setVal = (eid, val) => {
