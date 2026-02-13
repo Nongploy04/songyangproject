@@ -778,7 +778,8 @@
         <button class="filter-chip" onclick="handleChipFilter(this, 'asphalt')">ลาดยาง</button>
         <button class="filter-chip" onclick="handleChipFilter(this, 'concrete')">คอนกรีต</button>
         <button class="filter-chip" onclick="handleChipFilter(this, 'gravel')">หินคลุก</button>
-        <button class="filter-chip" onclick="handleChipFilter(this, 'soil')">ดิน/อื่นๆ</button>
+        <button class="filter-chip" onclick="handleChipFilter(this, 'soil')">ถนนดิน</button>
+        <button class="filter-chip" onclick="handleChipFilter(this, 'building')">อาคาร</button>
     </div>
 
     <div class="container" id="projectList">
@@ -928,7 +929,8 @@
                         <option value="asphalt">ลาดยาง (Asphalt)</option>
                         <option value="concrete">คอนกรีต (Concrete)</option>
                         <option value="gravel">หินคลุก/ลูกรัง (Gravel)</option>
-                        <option value="soil">ดิน/อื่นๆ (Soil/Others)</option>
+                        <option value="soil">ถนนดิน (Soil Road)</option>
+                        <option value="building">อาคาร (Building)</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -1530,7 +1532,10 @@
             // Priority 3: Gravel/Soil (Includes "หินคลุก", "ลูกรัง")
             if (t.includes('หินคลุก') || t.includes('ลูกรัง')) return 'gravel';
 
-            // Priority 4: Soil/Others (Default fallback if others fail, or explicit "ดิน")
+            // Priority 4: Building (Includes "อาคาร", "โรง", "ศาลา", "บ้าน", "ศูนย์")
+            if (t.includes('อาคาร') || t.includes('โรง') || t.includes('ศาลา') || t.includes('บ้าน') || t.includes('ศูนย์')) return 'building';
+
+            // Priority 5: Soil Road/Others (Default fallback if others fail, or explicit "ดิน")
             return 'soil';
         }
 
