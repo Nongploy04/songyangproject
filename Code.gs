@@ -5,6 +5,16 @@ const SHEET_ID = '1qi2WNGDguZtkEtCU2FzzEF_jiVLN82yf23Hbv2H2weA';
 const DRIVE_FOLDER_ID = '1ODlt5J0QLtmUQwzxte2_5n5BWy8Xefky'; // Project Images folder (Public)
 
 function doGet(e) {
+  // --- CacheService: เช็คแคชก่อนเพื่อความเร็ว ---
+  const cache = CacheService.getScriptCache();
+  const cached = cache.get('projectData');
+  
+  if (cached) {
+    return ContentService.createTextOutput(cached)
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+  
+  // ไม่มีแคช → อ่านจาก Sheet
   const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Sheet1');
   const optionsSheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Options');
   
@@ -33,11 +43,17 @@ function doGet(e) {
     };
   }
   
-  return ContentService.createTextOutput(JSON.stringify({
+  const jsonOutput = JSON.stringify({
     status: 'success',
     projects: projects,
     options: options
-  })).setMimeType(ContentService.MimeType.JSON);
+  });
+  
+  // เก็บแคช 300 วินาที (5 นาที)
+  cache.put('projectData', jsonOutput, 300);
+  
+  return ContentService.createTextOutput(jsonOutput)
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
 function doPost(e) {
@@ -216,6 +232,7 @@ function createProject(payload) {
     
     // Append single row
     sheet.appendRow(newRow);
+    CacheService.getScriptCache().remove('projectData'); // ล้างแคช
     
     return ContentService.createTextOutput(JSON.stringify({
       status: 'success'
@@ -260,6 +277,7 @@ function updateProject(payload) {
     });
     
     range.setValues([values]);
+    CacheService.getScriptCache().remove('projectData'); // ล้างแคช
     
     return ContentService.createTextOutput(JSON.stringify({
       status: 'success'
@@ -291,6 +309,7 @@ function deleteProject(payload) {
     const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Sheet1');
     const rowIndex = parseInt(payload.id);
     sheet.deleteRow(rowIndex);
+    CacheService.getScriptCache().remove('projectData'); // ล้างแคช
     
     return ContentService.createTextOutput(JSON.stringify({
       status: 'success'
