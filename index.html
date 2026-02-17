@@ -1202,11 +1202,9 @@
                 const base64Data = await fileToBase64(file);
 
                 showStatus("☁️ 3. อ่านไฟล์สำเร็จ! กำลังส่งขึ้นระบบ (Drive)...");
-                // ใช้ mode: 'cors' และ credentials: 'omit' เพื่อความเสถียรสูงสุดกับ GAS
+                // ใช้ fetch พื้นฐานที่สุดสำหรับ GAS เพื่อให้ browser จัดการ Redirect เอง
                 const uploadRes = await fetch(API_URL, {
                     method: 'POST',
-                    mode: 'cors',
-                    credentials: 'omit',
                     body: JSON.stringify({
                         action: 'upload_to_drive',
                         fileName: file.name,
@@ -1223,8 +1221,6 @@
                 showStatus("🤖 4. อัปโหลดสำเร็จ! กำลังให้ AI วิเคราะห์ราคากลาง...");
                 const parseRes = await fetch(API_URL, {
                     method: 'POST',
-                    mode: 'cors',
-                    credentials: 'omit',
                     body: JSON.stringify({
                         action: 'parse_image_from_drive',
                         imageUrl: uploadResult.url
