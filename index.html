@@ -1160,11 +1160,12 @@
             } catch (err) {
                 console.error(">>> [TEST] Connection Info:", err);
                 statusDiv.innerHTML = `❌ <b>วิเคราะห์แล้ว: การเชื่อมต่อถูกบล็อก</b><br>
+                ลิงก์ที่ใช้: <small>${API_URL}</small><br>
                 ข้อผิดพลาด: ${err.message}<br><br>
                 <b>วิธีแก้โปรดทำตามนี้ทีละข้อ:</b><br>
                 1. ลองเปิดเว็บด้วย <b>โหมดไม่ระบุตัวตน (Incognito)</b><br>
                 2. ปิด <b>Ad-blocker</b> หรือ VPN (ถ้ามี)<br>
-                3. ลองคัดลอกลิงก์ API ไปเปิดในแท็บใหม่ ถ้าเปิดไม่ได้เลย แสดงว่าตอน Deploy คุณไม่ได้เลือก <b>"Anyone"</b> ครับ`;
+                3. ลองคัดลอกลิงก์ API ข้างบนไปเปิดในแท็บใหม่ ถ้าเปิดไม่ได้เลย แสดงว่าตอน Deploy คุณไม่ได้เลือก <b>"Anyone"</b> ครับ`;
 
                 statusDiv.style.background = "#ffebee";
                 statusDiv.style.color = "#c62828";
@@ -1464,11 +1465,8 @@
             // 2. ดึงข้อมูลใหม่จาก Server ในพื้นหลัง
             try {
                 console.log(">>> [INIT] Fetching from API:", API_URL);
-                const response = await fetch(API_URL + '?t=' + new Date().getTime(), {
-                    method: 'GET',
-                    mode: 'cors',
-                    credentials: 'omit'
-                });
+                // ใช้ fetch แบบเรียบง่ายที่สุดเพื่อให้เบราว์เซอร์จัดการขั้นตอนอื่นเอง
+                const response = await fetch(API_URL);
 
                 if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
                 const result = await response.json();
