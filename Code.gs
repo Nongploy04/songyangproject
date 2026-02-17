@@ -107,6 +107,7 @@ function doPost(e) {
       return updateProject(payload);
     } else if (action === 'delete') {
       return deleteProject(payload);
+    }
     
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
