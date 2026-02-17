@@ -1203,37 +1203,30 @@
                 showStatus("📖 2. กำลังอ่านไฟล์: " + file.name);
                 const base64Data = await fileToBase64(file);
 
-                showStatus("☁️ 3. อ่านไฟล์สำเร็จ! กำลังส่งขึ้นระบบ (Drive)...");
-                // ใช้ Simple Request (Form-Encoded) เพื่อเลี่ยงปัญหา CORS Preflight บล็อก
+                showStatus("☁️ 3. อ่านไฟล์สำเร็จ! กำลังส่งวิเคราะห์ (ขั้นตอนนี้ใช้เวลาประมาณ 10-15 วินาที)...");
+
+                // ใช้เทคนิค One-Shot: ส่งทีเดียวทั้งอัปโหลดและวิเคราะห์ (ลดจุดเฟลเรื่อง CORS)
                 const body = new URLSearchParams();
-                body.append('action', 'upload_to_drive');
+                body.append('action', 'upload_and_parse');
                 body.append('fileName', file.name);
                 body.append('mimeType', file.type || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
                 body.append('data', base64Data.split(',')[1]);
 
-                const uploadRes = await fetch(API_URL, {
+                const response = await fetch(API_URL, {
                     method: 'POST',
-                    body: body // Browser จะตั้ง Content-Type เป็น application/x-www-form-urlencoded ให้อัตโนมัติ
+                    body: body
                 });
 
-                if (!uploadRes.ok) throw new Error(`Network Error: ${uploadRes.status}`);
-                const uploadResult = await uploadRes.json();
+                if (!response.ok) throw new Error(`Network Error: ${response.status}`);
+                const result = await response.json();
 
-                if (uploadResult.status !== 'success') throw new Error(uploadResult.message);
-
-                showStatus("🤖 4. อัปโหลดสำเร็จ! กำลังให้ AI วิเคราะห์ราคากลาง...");
-
-                const parseBody = new URLSearchParams();
-                parseBody.append('action', 'parse_image_from_drive');
-                parseBody.append('imageUrl', uploadResult.url);
-
-                const parseRes = await fetch(API_URL, {
-                    method: 'POST',
-                    body: parseBody
-                });
-
-                if (!parseRes.ok) throw new Error(`AI Request Error: ${parseRes.status}`);
-                const result = await parseRes.json();
+                if (result.status === 'success' && result.data) {
+                    fillFormFields(result.data);
+                    showStatus("✅ 4. วิเคราะห์เสร็จสิ้น! ข้อมูลถูกกรอกแล้วครับ");
+                    setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
+                } else {
+                    throw new Error(result.message || "AI ไม่ส่งข้อมูลกลับมา");
+                }
 
                 if (result.status === 'success' && result.data) {
                     fillFormFields(result.data);
@@ -1340,30 +1333,27 @@
                 // 1. Resize Image
                 const resizedBase64 = await resizeImage(file, 800);
 
-                // 2. Send to GAS (Using the stable Drive flow too)
-                const uploadRes = await fetch(API_URL, {
+                // 2. One-Shot อัปโหลดและวิเคราะห์
+                const body = new URLSearchParams();
+                body.append('action', 'upload_and_parse');
+                body.append('fileName', 'ai_scan_' + new Date().getTime() + '.jpg');
+                body.append('mimeType', 'image/jpeg');
+                body.append('data', resizedBase64.split(',')[1]);
+
+                const response = await fetch(API_URL, {
                     method: 'POST',
-                    body: JSON.stringify({
-                        action: 'upload_to_drive',
-                        fileName: 'ai_scan_' + new Date().getTime() + '.jpg',
-                        mimeType: 'image/jpeg',
-                        data: resizedBase64.split(',')[1]
-                    })
+                    body: body
                 });
 
-                const uploadResult = await uploadRes.json();
-                if (uploadResult.status !== 'success') throw new Error(uploadResult.message);
+                if (!response.ok) throw new Error(`Network Error: ${response.status}`);
+                const result = await response.json();
 
-                const parseRes = await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        action: 'parse_image_from_drive',
-                        imageUrl: uploadResult.url
-                    })
-                });
-
-                if (!parseRes.ok) throw new Error(`Server Error (${parseRes.status})`);
-                const result = await parseRes.json();
+                if (result.status === 'success' && result.data) {
+                    fillFormFields(result.data);
+                    alert('✨ วิเคราะห์รูปภาพเสร็จสิ้น! ข้อมูลถูกกรอกแล้วครับ');
+                } else {
+                    throw new Error(result.message || "ไม่สามารถอ่านข้อมูลได้");
+                }
 
                 if (result.status === 'success' && result.data) {
                     fillFormFields(result.data);
@@ -2202,7 +2192,7 @@
         init();
     </script>
     <div style="position:fixed; bottom:5px; left:10px; font-size:10px; color:#ccc; opacity:0.5; pointer-events:none;">
-        v29.1 - Build 2026.02.17</div>
+        v30.0 - OneShot Build</div>
 </body>
 
 </html>

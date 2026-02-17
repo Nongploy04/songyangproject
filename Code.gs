@@ -1,12 +1,6 @@
-// Google Apps Script Backend with Drive Integration (Version: v29.0)
-// This file should be uploaded to Google Apps Script
-/**
- * @OnlyCurrentDoc
- */
-// ---
+// Google Apps Script Backend with Drive Integration (Version: v30.0 - OneShot)
 // หากเกิดปัญหา "Failed to fetch":
 // ใน appsscript.json ต้องตั้งค่า "access": "ANYONE" และ "executeAs": "USER_DEPLOYING"
-// ---
 
 const SHEET_ID = '1qi2WNGDguZtkEtCU2FzzEF_jiVLN82yf23Hbv2H2weA';
 const DRIVE_FOLDER_ID = '1ODlt5J0QLtmUQwzxte2_5n5BWy8Xefky'; // Project Images folder (Public)
@@ -107,7 +101,71 @@ function doPost(e) {
       return updateProject(payload);
     } else if (action === 'delete') {
       return deleteProject(payload);
+    } else if (action === 'upload_and_parse') {
+      return uploadAndParse(payload);
     }
+    
+    throw new Error('Action not found: ' + action);
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'error',
+      message: err.toString()
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+// --- NEW: One-Shot Upload and AI Parse ---
+function uploadAndParse(payload) {
+  try {
+    const { fileName, mimeType, data } = payload;
+    
+    // 1. Upload to Drive
+    const blob = Utilities.newBlob(Utilities.base64Decode(data), mimeType, fileName);
+    const folder = DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    const file = folder.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    // 2. Call Gemini AI (using the blob/data directly to save time)
+    const base64Data = data; // use the already base64 data
+    const apiKey = 'AIzaSyCXsiVKskwitWyIwFmdemqAV5Wamas7kfQ';
+    const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    
+    const prompt = `วิเคราะห์ไฟล์แนบนี้ (รูปภาพหรือเอกสารราชการ) และดึงข้อมูลโครงการก่อสร้างออกมาในรูปแบบ JSON โดยมีเงื่อนไขสำคัญดังนี้:
+1. "title": ดึงชื่อโครงการออกมาโดย **ห้ามมีคำว่า "โครงการ" นำหน้า** (เช่น ถ้าในเอกสารเขียนว่า "โครงการก่อสร้างถนน..." ให้ดึงมาแค่ "ก่อสร้างถนน...")
+2. "budget": ให้ดึงค่า **"ราคากลาง"** มาใช้เป็นลำดับแรก หากไม่มีให้ใช้งบประมาณตามข้อบัญญัติ (ส่งกลับเฉพาะตัวเลขเท่านั้น)
+3. "desc": รายละเอียด/ปริมาณงาน
+4. ฟิลด์อื่นๆ ให้ดึงตามที่ระบุในรูปแบบ JSON (title, type, desc, budget, budgetSource, orderNo, orderDate, contractNo, signDate, end, duration, start, deliveryDate, inspectionDate, contractor, supervisor, comm1, comm2, comm3)
+ตอบเฉพาะ JSON เท่านั้น ไม่ต้องมีคำอธิบายเพิ่มเติม`;
+
+    const requestBody = {
+      contents: [{
+        parts: [{ text: prompt }, { inline_data: { mime_type: mimeType, data: base64Data } }]
+      }]
+    };
+    
+    const options = {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify(requestBody),
+      muteHttpExceptions: true
+    };
+    
+    const response = UrlFetchApp.fetch(apiURL, options);
+    const result = JSON.parse(response.getContentText());
+    
+    if (result.candidates && result.candidates[0]) {
+      const text = result.candidates[0].content.parts[0].text;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'success',
+          url: file.getUrl(),
+          data: JSON.parse(jsonMatch[0])
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    
+    throw new Error('AI parsing failed or no JSON found');
     
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
