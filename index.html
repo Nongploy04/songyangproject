@@ -1495,16 +1495,16 @@
                         projectList.innerHTML = `
                             <div style="text-align:center; padding:50px; color:#c62828; background:#ffebee; margin:20px; border-radius:12px; border:1px solid #ffcdd2;">
                                 <i class="fas fa-exclamation-triangle" style="font-size:2rem; margin-bottom:15px;"></i>
-                                <h3>เชื่อมต่อข้อมูลไม่ได้</h3>
-                                <p style="margin-bottom:20px;">${err.message === 'Failed to fetch' ? 'ถูกบล็อกการเชื่อมต่อ (อาจเกิดจาก Ad-blocker หรือ Browser บล็อก CORS)' : err.message}</p>
-                                <button onclick="location.reload()" style="padding:10px 20px; border-radius:30px; border:none; background:var(--md-sys-color-primary); color:white; cursor:pointer; font-family:inherit;">
-                                    <i class="fas fa-sync"></i> ลองใหม่อีกครั้ง
+                                <h3>เชื่อมต่อข้อมูลไม่ได้ (แคชค้างหรือการเชื่อมต่อถูกบล็อก)</h3>
+                                <p style="margin-bottom:20px;">${err.message === 'Failed to fetch' ? 'เซิร์ฟเวอร์ไม่ตอบสนอง (ลองกด Ctrl+F5 เพื่อล้างแคช)' : err.message}</p>
+                                <button onclick="localStorage.clear(); location.reload(true);" style="padding:10px 20px; border-radius:30px; border:none; background:var(--md-sys-color-primary); color:white; cursor:pointer; font-family:inherit; margin-bottom:10px;">
+                                    <i class="fas fa-sync"></i> กดตรงนี้เพื่อล้างแคชและลองใหม่
                                 </button>
                                 <div style="margin-top:20px; font-size:0.85rem; color:#666; text-align:left; background:white; padding:15px; border-radius:8px;">
-                                    <strong>วิธีแก้เบื้องต้น:</strong><br>
-                                    1. ลองเปิดใน <b>Chrome (หน้าต่างปกติ)</b> ไม่ใช่ Preview ในโปรแกรม<br>
-                                    2. ปิด <b>Ad-blocker</b> หรือ VPN<br>
-                                    3. หากเปิดไฟล์แบบดับเบิลคลิก (file://) อาจถูกเบราว์เซอร์บล็อก แนะนำให้ลองอัปโหลดขึ้น GitHub แล้วเปิดผ่าน GitHub Pages ครับ
+                                    <strong>สิ่งที่ต้องทำเพื่อแก้ปัญหานี้:</strong><br>
+                                    1. กดปุ่ม <b>Ctrl + F5</b> ที่คีย์บอร์ด (เพื่อบังคับโหลดโค้ดชุดใหม่ล่าสุด)<br>
+                                    2. <b>ลองคลิกลิงก์นี้ตรงๆ:</b> <a href="${API_URL}" target="_blank" style="color:blue;">คลิกไปที่ API</a> (ถ้าเปิดแล้วมีตัวเลขขึ้น แสดงว่าเน็ตปกติครับ)<br>
+                                    3. หากทำทุกอย่างแล้วยังไม่ได้ รบกวนลองเปิดใน <b>Edge</b> หรือ <b>โหมดไม่ระบุตัวตน</b> ครับ
                                 </div>
                             </div>
                         `;
@@ -2170,6 +2170,8 @@
 
         init();
     </script>
+    <div style="position:fixed; bottom:5px; left:10px; font-size:10px; color:#ccc; opacity:0.5; pointer-events:none;">
+        v27.3 - Build 2026.02.17</div>
 </body>
 
 </html>
