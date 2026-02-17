@@ -1,14 +1,12 @@
-// Google Apps Script Backend with Drive Integration (Version: v28)
+// Google Apps Script Backend with Drive Integration (Version: v29.0)
 // This file should be uploaded to Google Apps Script
 /**
  * @OnlyCurrentDoc
  */
+// ---
 // หากเกิดปัญหา "Failed to fetch":
 // ใน appsscript.json ต้องตั้งค่า "access": "ANYONE" และ "executeAs": "USER_DEPLOYING"
-// "webapp": {
-//   "executeAs": "USER_DEPLOYING",
-//   "access": "ANYONE"
-// }
+// ---
 
 const SHEET_ID = '1qi2WNGDguZtkEtCU2FzzEF_jiVLN82yf23Hbv2H2weA';
 const DRIVE_FOLDER_ID = '1ODlt5J0QLtmUQwzxte2_5n5BWy8Xefky'; // Project Images folder (Public)
@@ -78,11 +76,27 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    const payload = JSON.parse(e.postData.contents);
+    let payload;
+    // พยายามอ่านแบบ JSON ก่อน
+    try {
+      if (e.postData && e.postData.contents) {
+        payload = JSON.parse(e.postData.contents);
+      }
+    } catch (err) {
+      // ถ้าไม่ใช่ JSON ให้ลองอ่านจาก parameter (Simple POST / Form-Encoded)
+      payload = e.parameter;
+    }
+    
+    // ถ้ายังไม่มี payload อีก ให้ใช้ parameter ตรงๆ
+    if (!payload || Object.keys(payload).length === 0) {
+      payload = e.parameter;
+    }
+
     const action = payload.action;
     
     if (action === 'ping') {
-      return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'Pong!' })).setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'Pong!' }))
+        .setMimeType(ContentService.MimeType.JSON);
     } else if (action === 'upload_to_drive') {
       return uploadToDrive(payload);
     } else if (action === 'parse_image_from_drive') {
@@ -93,16 +107,6 @@ function doPost(e) {
       return updateProject(payload);
     } else if (action === 'delete') {
       return deleteProject(payload);
-    } else if (action === 'migrate') {
-      // One-time migration trigger
-      const result = migrateProjectTypes();
-      return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    return ContentService.createTextOutput(JSON.stringify({
-      status: 'error',
-      message: 'Unknown action'
-    })).setMimeType(ContentService.MimeType.JSON);
     
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({
