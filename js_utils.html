@@ -26,24 +26,35 @@
     function convertDate(str) {
         if (!str) return "";
         let s = str.toString();
+        // กรณีเป็น ISO format หรือ BE ISO format (yyyy-mm-dd)
         if (s.includes('-') && !s.includes('/')) {
             const parts = s.split('-');
             if (parts.length === 3) {
                 let y = parseInt(parts[0]);
-                if (y > 2400) y -= 543;
+                if (y > 2400) y -= 543; // ตรวจสอบและลดปี พ.ศ. ให้เป็น ค.ศ.
                 return `${y}-${parts[1].padStart(2, '0')}-${parts[2].substr(0, 2).padStart(2, '0')}`;
             }
         }
+        // กรณีเป็น Thai format (dd/mm/yyyy)
         const p = s.split('/');
         if (p.length === 3) {
             let d = p[0].padStart(2, '0');
             let m = p[1].padStart(2, '0');
             let y = parseInt(p[2]);
-            if (y > 2400) y -= 543;
+            if (y > 2400) y -= 543; // ตรวจสอบและลดปี พ.ศ. ให้เป็น ค.ศ.
             return `${y}-${m}-${d}`;
         }
         const d = new Date(s);
-        if (!isNaN(d)) return d.toISOString().split('T')[0];
+        if (!isNaN(d)) {
+            let y = d.getFullYear();
+            if (y > 2400) {
+                // ถ้าเป็น Date object ที่ปีเกิน ให้สร้างใหม่แบบหักลบปี
+                const fixedDate = new Date(d);
+                fixedDate.setFullYear(y - 543);
+                return fixedDate.toISOString().split('T')[0];
+            }
+            return d.toISOString().split('T')[0];
+        }
         return str;
     }
 
@@ -53,7 +64,7 @@
         if (isNaN(d)) return "";
         const day = d.getDate().toString().padStart(2, '0');
         const month = (d.getMonth() + 1).toString().padStart(2, '0');
-        const year = d.getFullYear() + 543;
+        const year = d.getFullYear(); // ส่งเป็น ค.ศ. (AD) เสมอ เพื่อให้ Google Sheet จัดการให้เองตาม Locale
         return `${day}/${month}/${year}`;
     }
 
@@ -61,6 +72,7 @@
         if (!str || str === "-") return "-";
         const d = new Date(str);
         if (isNaN(d.getTime())) return str;
+        // ใช้ toLocaleDateString('th-TH') ซึ่งจะจัดการบวก 543 ให้อัตโนมัติจากวันที่ ค.ศ.
         return d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
     }
 
