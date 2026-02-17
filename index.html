@@ -1465,8 +1465,7 @@
 
             // 2. ดึงข้อมูลใหม่จาก Server ในพื้นหลัง
             try {
-                console.log(">>> [INIT] Fetching from API:", API_URL);
-                // ใช้ Simple GET เพื่อหลีกเลี่ยง CORS เคร่งครัดในบางเบราว์เซอร์
+                console.log(">>> [INIT] Fetching from API (Fetch method):", API_URL);
                 const response = await fetch(API_URL, { mode: 'cors' });
 
                 if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
@@ -1474,40 +1473,40 @@
 
                 if (result.status === 'success' && result.projects) {
                     console.log(">>> [INIT] Fetch success, projects:", result.projects.length);
-                    // เก็บข้อมูลลง Cache สำหรับครั้งหน้า
                     localStorage.setItem('projects_cache', JSON.stringify(result));
-                    // ประมวลผลและแสดงผลข้อมูลล่าสุด
                     processMainData(result);
-                } else if (result.status === 'error') {
-                    throw new Error(result.message);
                 } else {
-                    throw new Error("Invalid response format");
+                    throw new Error(result.message || "Invalid response");
                 }
-
                 document.getElementById('loader').style.display = 'none';
             } catch (err) {
-                console.error('>>> [INIT] Fetch error:', err);
-                document.getElementById('loader').style.display = 'none';
+                console.warn('>>> [INIT] Fetch failed, trying JSONP fallback...', err);
+                try {
+                    await loadDataJSONP();
+                    document.getElementById('loader').style.display = 'none';
+                } catch (jsonpErr) {
+                    console.error('>>> [INIT] JSONP Fallback also failed:', jsonpErr);
+                    document.getElementById('loader').style.display = 'none';
 
-                // ถ้าดึงข้อมูลไม่ได้ และไม่มีแคชเลย ให้แสดงข้อความแจ้งเตือนที่หน้าเว็บ
-                if (!localStorage.getItem('projects_cache')) {
-                    if (projectList) {
-                        projectList.innerHTML = `
-                            <div style="text-align:center; padding:50px; color:#c62828; background:#ffebee; margin:20px; border-radius:12px; border:1px solid #ffcdd2;">
-                                <i class="fas fa-exclamation-triangle" style="font-size:2rem; margin-bottom:15px;"></i>
-                                <h3>เชื่อมต่อข้อมูลไม่ได้ (แคชค้างหรือการเชื่อมต่อถูกบล็อก)</h3>
-                                <p style="margin-bottom:20px;">${err.message === 'Failed to fetch' ? 'เซิร์ฟเวอร์ไม่ตอบสนอง (ลองกด Ctrl+F5 เพื่อล้างแคช)' : err.message}</p>
-                                <button onclick="localStorage.clear(); location.reload(true);" style="padding:10px 20px; border-radius:30px; border:none; background:var(--md-sys-color-primary); color:white; cursor:pointer; font-family:inherit; margin-bottom:10px;">
-                                    <i class="fas fa-sync"></i> กดตรงนี้เพื่อล้างแคชและลองใหม่
-                                </button>
-                                <div style="margin-top:20px; font-size:0.85rem; color:#666; text-align:left; background:white; padding:15px; border-radius:8px;">
-                                    <strong>สิ่งที่ต้องทำเพื่อแก้ปัญหานี้:</strong><br>
-                                    1. กดปุ่ม <b>Ctrl + F5</b> ที่คีย์บอร์ด (เพื่อบังคับโหลดโค้ดชุดใหม่ล่าสุด)<br>
-                                    2. <b>ลองคลิกลิงก์นี้ตรงๆ:</b> <a href="${API_URL}" target="_blank" style="color:blue;">คลิกไปที่ API</a> (ถ้าเปิดแล้วมีตัวเลขขึ้น แสดงว่าเน็ตปกติครับ)<br>
-                                    3. หากทำทุกอย่างแล้วยังไม่ได้ รบกวนลองเปิดใน <b>Edge</b> หรือ <b>โหมดไม่ระบุตัวตน</b> ครับ
+                    if (!localStorage.getItem('projects_cache')) {
+                        if (projectList) {
+                            projectList.innerHTML = `
+                                <div style="text-align:center; padding:50px; color:#c62828; background:#ffebee; margin:20px; border-radius:12px; border:1px solid #ffcdd2;">
+                                    <i class="fas fa-exclamation-triangle" style="font-size:2rem; margin-bottom:15px;"></i>
+                                    <h3>เชื่อมต่อข้อมูลไม่ได้ (แคชค้างหรือการเชื่อมต่อถูกบล็อก)</h3>
+                                    <p style="margin-bottom:20px;">${err.message === 'Failed to fetch' ? 'เซิร์ฟเวอร์ไม่ตอบสนอง (ลองกด Ctrl+F5 เพื่อล้างแคช)' : err.message}</p>
+                                    <button onclick="localStorage.clear(); location.reload(true);" style="padding:10px 20px; border-radius:30px; border:none; background:var(--md-sys-color-primary); color:white; cursor:pointer; font-family:inherit; margin-bottom:10px;">
+                                        <i class="fas fa-sync"></i> กดตรงนี้เพื่อล้างแคชและลองใหม่
+                                    </button>
+                                    <div style="margin-top:20px; font-size:0.85rem; color:#666; text-align:left; background:white; padding:15px; border-radius:8px;">
+                                        <strong>สิ่งที่ต้องทำเพื่อแก้ปัญหานี้:</strong><br>
+                                        1. กดปุ่ม <b>Ctrl + F5</b> ที่คีย์บอร์ด (เพื่อบังคับโหลดโค้ดชุดใหม่ล่าสุด)<br>
+                                        2. <b>ลองคลิกลิงก์นี้ตรงๆ:</b> <a href="${API_URL}" target="_blank" style="color:blue;">คลิกไปที่ API</a> (ถ้าเปิดแล้วมีตัวเลขขึ้น แสดงว่าเน็ตปกติครับ)<br>
+                                        3. หากทำทุกอย่างแล้วยังไม่ได้ รบกวนลองเปิดใน <b>Edge</b> หรือ <b>โหมดไม่ระบุตัวตน</b> ครับ
+                                    </div>
                                 </div>
-                            </div>
-                        `;
+                            `;
+                        }
                     }
                 }
             }
@@ -1793,14 +1792,15 @@
         function formatDateDisplay(str) {
             if (!str || str === "-") return "-";
             const d = new Date(str);
-            if (isNaN(d.getTime())) return str;
-
-            // toLocaleDateString('th-TH') จะจัดการบวก 543 ให้อัตโนมัติจากวันที่ ค.ศ.
-            return d.toLocaleDateString('th-TH', {
-                day: 'numeric',
-                month: 'short',
-                year: 'numeric'
-            });
+            if (!isNaN(d.getTime())) {
+                // toLocaleDateString('th-TH') จะจัดการบวก 543 ให้อัตโนมัติจากวันที่ ค.ศ.
+                return d.toLocaleDateString('th-TH', {
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric'
+                });
+            }
+            return str;
         }
 
         let currentChipFilter = 'all';
@@ -2168,10 +2168,38 @@
             }
         });
 
+        // --- JSONP Fallback (Bypass CORS) ---
+        function loadDataJSONP() {
+            return new Promise((resolve, reject) => {
+                const callbackName = 'jsonp_callback_' + Math.round(100000 * Math.random());
+                window[callbackName] = function (data) {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    if (data && data.status === 'success') {
+                        console.log(">>> [JSONP] Success, projects:", data.projects.length);
+                        localStorage.setItem('projects_cache', JSON.stringify(data));
+                        processMainData(data);
+                        resolve();
+                    } else {
+                        reject(new Error("JSONP data error"));
+                    }
+                };
+
+                const script = document.createElement('script');
+                script.src = API_URL + (API_URL.includes('?') ? '&' : '?') + 'callback=' + callbackName + '&t=' + new Date().getTime();
+                script.onerror = () => {
+                    delete window[callbackName];
+                    document.body.removeChild(script);
+                    reject(new Error("Script load error (JSONP Blocked)"));
+                };
+                document.body.appendChild(script);
+            });
+        }
+
         init();
     </script>
     <div style="position:fixed; bottom:5px; left:10px; font-size:10px; color:#ccc; opacity:0.5; pointer-events:none;">
-        v27.3 - Build 2026.02.17</div>
+        v28.0 - JSONP Hybrid Build</div>
 </body>
 
 </html>

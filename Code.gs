@@ -1,4 +1,4 @@
-// Google Apps Script Backend with Drive Integration (Version: v27)
+// Google Apps Script Backend with Drive Integration (Version: v28)
 // This file should be uploaded to Google Apps Script
 /**
  * @OnlyCurrentDoc
@@ -19,6 +19,11 @@ function doGet(e) {
   const cached = cache.get('projectData');
   
   if (cached) {
+    const callback = e.parameter.callback;
+    if (callback) {
+      return ContentService.createTextOutput(callback + '(' + cached + ')')
+        .setMimeType(ContentService.MimeType.JAVASCRIPT);
+    }
     return ContentService.createTextOutput(cached)
       .setMimeType(ContentService.MimeType.JSON);
   }
@@ -58,8 +63,14 @@ function doGet(e) {
     options: options
   });
   
-  // เก็บแคช 300 วินาที (5 นาที)
-  cache.put('projectData', jsonOutput, 300);
+  // Cache for 10 minutes (600 seconds)
+  cache.put('projectData', jsonOutput, 600);
+
+  const callback = e.parameter.callback;
+  if (callback) {
+    return ContentService.createTextOutput(callback + '(' + jsonOutput + ')')
+      .setMimeType(ContentService.MimeType.JAVASCRIPT);
+  }
   
   return ContentService.createTextOutput(jsonOutput)
     .setMimeType(ContentService.MimeType.JSON);
