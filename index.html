@@ -939,7 +939,7 @@
                 </div>
                 <div class="form-group">
                     <label class="form-label">งบประมาณ (บาท)</label>
-                    <input type="number" id="f-budget" class="form-input">
+                    <input type="number" id="f-budget" class="form-input" step="0.01">
                 </div>
                 <div class="form-group">
                     <label class="form-label">แหล่งเงินงบประมาณ</label>
@@ -1060,7 +1060,7 @@
 
     <script>
         // --- 1. CONFIGURATION ---
-        const API_URL = 'https://script.google.com/macros/s/AKfycbzExacDlcSXxtGaFFz-cEkthjpux1Gn7xPNIbEzu8vB_pp98s_r1unZ4wAFFtCbTpFr/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwFI3ch0HGZQC4ThXYvApwQpUytn25JfySPJY-Bmu03hsZcHjiudn9Ucl2PdRjLtoyI/exec';
 
         // --- NEW: Handle Image Upload with Resizing ---
         async function handleImageUpload(input) {
@@ -1245,7 +1245,7 @@
                     id: id,
                     title: r[COLUMN_MAP.title] || "",
                     desc: r[COLUMN_MAP.desc] || "",
-                    budget: parseInt((r[COLUMN_MAP.budget] || "0").toString().replace(/,/g, '')),
+                    budget: parseFloat((r[COLUMN_MAP.budget] || "0").toString().replace(/,/g, '')),
                     orderNo: String(r[COLUMN_MAP.orderNo] || "-"),
                     orderDate: convertDate(r[COLUMN_MAP.orderDate]),
                     contractNo: String(r[COLUMN_MAP.contractNo] || "-"),
@@ -1787,29 +1787,26 @@
             document.getElementById('pdf-modal').style.display = 'flex';
         }
 
-        function populateDatalists(opts, history = []) {
-            // Extract history (indices: Contractor=12, Supervisor=13, Committees=14,15,16)
-            const histContractors = history.map(p => p[12]).filter(x => x && x !== '-');
-            const histSupervisors = history.map(p => p[13]).filter(x => x && x !== '-');
-            const histCommittees = history.flatMap(p => [p[14], p[15], p[16]]).filter(x => x && x !== '-');
-
-            const fill = (id, list, extraList = []) => {
+        function populateDatalists(opts) {
+            // Logic: Use master options from 'Options' sheet only
+            const fill = (id, list) => {
                 const el = document.getElementById(id);
                 if (!el) return;
-                // Merge master options with historical data, remove duplicates/empties
-                const merged = [...new Set([...list, ...extraList])]
+
+                // Filter and clean list
+                const cleaned = [...new Set(list)]
                     .map(x => x.toString().trim())
                     .filter(x => x && x !== "");
 
                 // Sort alphabetically
-                merged.sort((a, b) => a.localeCompare(b, 'th'));
+                cleaned.sort((a, b) => a.localeCompare(b, 'th'));
 
-                el.innerHTML = merged.map(item => `<option value="${item}">`).join('');
+                el.innerHTML = cleaned.map(item => `<option value="${item}">`).join('');
             };
 
-            fill('list-contractors', opts.contractors || [], histContractors);
-            fill('list-supervisors', opts.supervisors || [], histSupervisors);
-            fill('list-committees', opts.committees || [], histCommittees);
+            fill('list-contractors', opts.contractors || []);
+            fill('list-supervisors', opts.supervisors || []);
+            fill('list-committees', opts.committees || []);
         }
 
         init();

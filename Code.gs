@@ -238,6 +238,10 @@ function createProject(payload) {
     
     // Append single row
     sheet.appendRow(newRow);
+    
+    // SYNC OPTIONS: Add new names to Options sheet if they don't exist
+    syncOptions(payload.data);
+    
     CacheService.getScriptCache().remove('projectData'); // ล้างแคช
     
     return ContentService.createTextOutput(JSON.stringify({
@@ -291,6 +295,10 @@ function updateProject(payload) {
     });
     
     range.setValues([values]);
+    
+    // SYNC OPTIONS: Add new names to Options sheet if they don't exist
+    syncOptions(payload.data);
+
     CacheService.getScriptCache().remove('projectData'); // ล้างแคช
     
     return ContentService.createTextOutput(JSON.stringify({
@@ -330,6 +338,64 @@ function deleteProject(payload) {
     })).setMimeType(ContentService.MimeType.JSON);
   } finally {
     lock.releaseLock();
+  }
+}
+
+/**
+ * Sync names from project data to Options sheet
+ * @param {Object} data - Project data payload
+ */
+function syncOptions(data) {
+  try {
+    const ss = SpreadsheetApp.openById(SHEET_ID);
+    let optSheet = ss.getSheetByName('Options');
+    
+    // Create Options sheet if it doesn't exist
+    if (!optSheet) {
+      optSheet = ss.insertSheet('Options');
+      optSheet.getRange(1, 1, 1, 3).setValues([["Contractors", "Supervisors", "Committees"]]);
+    }
+    
+    // Read current options (skip header)
+    const lastRow = Math.max(1, optSheet.getLastRow());
+    const currentData = optSheet.getRange(1, 1, lastRow, 3).getValues();
+    const headers = currentData[0];
+    
+    const contractors = currentData.slice(1).map(r => r[0]).filter(Boolean);
+    const supervisors = currentData.slice(1).map(r => r[1]).filter(Boolean);
+    const committees = currentData.slice(1).map(r => r[2]).filter(Boolean);
+
+    // Names to check (Keys from COLUMN_MAP in index.html, but here we use headers)
+    const newContractor = data["Contractor"];
+    // Supervisors might be joined by \n
+    const newSupervisors = (data["Supervisor"] || "").toString().split('\n').map(s => s.trim()).filter(Boolean);
+    const newCommittees = [data["Committee 1"], data["Committee 2"], data["Committee 3"]].filter(Boolean);
+
+    const updates = []; // To store rows to append for each column? Better to handle per column.
+
+    const addUnique = (name, existingList, colIndex) => {
+      if (name && !existingList.includes(name)) {
+        // Find first empty row in that column
+        let targetRow = 2;
+        while (optSheet.getRange(targetRow, colIndex).getValue() !== "") {
+          targetRow++;
+        }
+        optSheet.getRange(targetRow, colIndex).setValue(name);
+        existingList.push(name); // Add to local list to prevent duplicates in same run
+      }
+    };
+
+    // Column 1: Contractors
+    addUnique(newContractor, contractors, 1);
+
+    // Column 2: Supervisors
+    newSupervisors.forEach(s => addUnique(s, supervisors, 2));
+
+    // Column 3: Committees
+    newCommittees.forEach(c => addUnique(c, committees, 3));
+
+  } catch (err) {
+    console.error('syncOptions failed: ' + err.toString());
   }
 }
 
