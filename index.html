@@ -948,15 +948,31 @@
                 onsubmit="handleFormSubmit(event)">
                 <input type="hidden" id="f-id"> <!-- Row Index -->
 
-                <!-- Auto-fill Button -->
-                <div style="margin-bottom: 20px; text-align: center;">
-                    <input type="file" id="ai-upload" accept="image/*" style="display:none"
-                        onchange="handleImageUpload(this)">
-                    <button type="button" id="rescanBtn" class="secondary-btn"
-                        style="width: 100%; background: #e3f2fd; color: #1565c0; border: 1px dashed #1565c0;"
-                        onclick="document.getElementById('ai-upload').click()">
-                        <i class="fas fa-magic"></i> อัปโหลดรูปเพื่อกรอกข้อมูลอัตโนมัติ (AI)
-                    </button>
+                <!-- Auto-fill Buttons -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px;">
+                    <div>
+                        <input type="file" id="ai-upload" accept="image/*" style="display:none"
+                            onchange="handleImageUpload(this)">
+                        <button type="button" id="rescanBtn" class="secondary-btn"
+                            style="width: 100%; height: 60px; background: #e3f2fd; color: #1565c0; border: 1px dashed #1565c0; font-size: 0.9rem;"
+                            onclick="document.getElementById('ai-upload').click()">
+                            <i class="fas fa-magic"></i> อัปโหลดรูป (AI)
+                        </button>
+                    </div>
+                    <div>
+                        <input type="file" id="docx-upload" accept=".docx" style="display:none"
+                            onchange="handleDocxUpload(this)">
+                        <button type="button" id="docxBtn" class="secondary-btn"
+                            style="width: 100%; height: 60px; background: #f3e5f5; color: #7b1fa2; border: 1px dashed #7b1fa2; font-size: 0.9rem;"
+                            onclick="document.getElementById('docx-upload').click()">
+                            <i class="fas fa-file-word"></i> อัปโหลด DOCX
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Status Message for AI/DOCX -->
+                <div id="ai-status"
+                    style="display: none; padding: 12px; margin-bottom: 20px; border-radius: 12px; font-size: 0.9rem; text-align: center; background: #fff3e0; color: #e65100; border: 1px solid #ffe0b2; font-weight: 500; animation: fadeIn 0.3s ease;">
                 </div>
 
                 <div class="form-group">
@@ -1101,7 +1117,213 @@
 
     <script>
         // --- 1. CONFIGURATION ---
-        const API_URL = 'https://script.google.com/macros/s/AKfycbwFI3ch0HGZQC4ThXYvApwQpUytn25JfySPJY-Bmu03hsZcHjiudn9Ucl2PdRjLtoyI/exec';
+        const API_URL = 'https://script.google.com/macros/s/AKfycbx7gnbe4ZJQ0VNXgrU1kJnPWK7n1CvV1SWbLWI5M5Uhh7wxkQ-BMi4ZEEG7nwKlv2Jz/exec';
+
+        // --- Global Error Handler to catch hidden crashes ---
+        window.onerror = function (message, source, lineno, colno, error) {
+            alert("⚠️ พบข้อผิดพลาดในระบบ JavaScript:\n" + message + "\n\nที่บรรทัด: " + lineno);
+            return false;
+        };
+
+        // --- NEW: Test Connection to GAS ---
+        async function testConnection() {
+            const statusDiv = document.getElementById('ai-status');
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = "🔍 กำลังวิเคราะห์สาเหตุการเชื่อมต่อล้มเหลว...<br><small>1. ทดสอบการดึงข้อมูลโครงการ (GET)...</small>";
+
+            try {
+                // Test 1: Simple GET (Project List)
+                const resGet = await fetch(API_URL);
+                if (resGet.ok) {
+                    statusDiv.innerHTML += "<br>✅ ขั้นตอน 1 สำเร็จ (อ่านข้อมูลได้)";
+                } else {
+                    throw new Error("ขั้นตอน 1 ล้มเหลว (Server Error)");
+                }
+
+                // Test 2: POST Ping
+                statusDiv.innerHTML += "<br><small>2. ทดสอบการส่งคำสั่ง (POST)...</small>";
+                const resPost = await fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'omit',
+                    body: JSON.stringify({ action: 'ping' })
+                });
+                const result = await resPost.json();
+
+                if (result.status === 'success') {
+                    statusDiv.innerHTML = "✅ <b>เชื่อมต่อสมบูรณ์!</b><br>ระบบพื้นฐานทำงานได้ปกติครับ ลองอัปโหลดไฟล์ใหม่อีกครั้ง";
+                    statusDiv.style.background = "#e8f5e9";
+                    statusDiv.style.color = "#2e7d32";
+                } else {
+                    throw new Error("Server response error: " + (result.message || "unknown"));
+                }
+            } catch (err) {
+                console.error(">>> [TEST] Connection Info:", err);
+                statusDiv.innerHTML = `❌ <b>วิเคราะห์แล้ว: การเชื่อมต่อถูกบล็อก</b><br>
+                ข้อผิดพลาด: ${err.message}<br><br>
+                <b>วิธีแก้โปรดทำตามนี้ทีละข้อ:</b><br>
+                1. ลองเปิดเว็บด้วย <b>โหมดไม่ระบุตัวตน (Incognito)</b><br>
+                2. ปิด <b>Ad-blocker</b> หรือ VPN (ถ้ามี)<br>
+                3. ลองคัดลอกลิงก์ API ไปเปิดในแท็บใหม่ ถ้าเปิดไม่ได้เลย แสดงว่าตอน Deploy คุณไม่ได้เลือก <b>"Anyone"</b> ครับ`;
+
+                statusDiv.style.background = "#ffebee";
+                statusDiv.style.color = "#c62828";
+                statusDiv.style.textAlign = "left";
+            }
+        }
+
+        // --- NEW: Handle DOCX Upload ---
+        async function handleDocxUpload(input) {
+            const statusDiv = document.getElementById('ai-status');
+            const showStatus = (msg, isError = false) => {
+                statusDiv.style.display = 'block';
+                statusDiv.innerText = msg;
+                statusDiv.style.background = isError ? '#ffebee' : '#fff3e0';
+                statusDiv.style.color = isError ? '#c62828' : '#e65100';
+                statusDiv.style.borderColor = isError ? '#ffcdd2' : '#ffe0b2';
+            };
+
+            showStatus("⏳ 1. เริ่มต้นการอัปโหลด...");
+            console.log(">>> [DOCX] Starting upload process...");
+
+            const file = input.files[0];
+            if (!file) {
+                showStatus("❌ ไม่พบไฟล์ที่เลือก", true);
+                return;
+            }
+
+            const btn = document.getElementById('docxBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังวิเคราะห์...';
+            btn.disabled = true;
+
+            try {
+                showStatus("📖 2. กำลังอ่านไฟล์: " + file.name);
+                const base64Data = await fileToBase64(file);
+
+                showStatus("☁️ 3. อ่านไฟล์สำเร็จ! กำลังส่งขึ้นระบบ (Drive)...");
+                // ใช้ mode: 'cors' และ credentials: 'omit' เพื่อความเสถียรสูงสุดกับ GAS
+                const uploadRes = await fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'omit',
+                    body: JSON.stringify({
+                        action: 'upload_to_drive',
+                        fileName: file.name,
+                        mimeType: file.type || 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                        data: base64Data.split(',')[1]
+                    })
+                });
+
+                if (!uploadRes.ok) throw new Error(`Network Error: ${uploadRes.status}`);
+                const uploadResult = await uploadRes.json();
+
+                if (uploadResult.status !== 'success') throw new Error(uploadResult.message);
+
+                showStatus("🤖 4. อัปโหลดสำเร็จ! กำลังให้ AI วิเคราะห์ราคากลาง...");
+                const parseRes = await fetch(API_URL, {
+                    method: 'POST',
+                    mode: 'cors',
+                    credentials: 'omit',
+                    body: JSON.stringify({
+                        action: 'parse_image_from_drive',
+                        imageUrl: uploadResult.url
+                    })
+                });
+
+                if (!parseRes.ok) throw new Error(`AI Request Error: ${parseRes.status}`);
+                const result = await parseRes.json();
+
+                if (result.status === 'success' && result.data) {
+                    fillFormFields(result.data);
+                    showStatus("✅ 5. วิเคราะห์เสร็จสิ้น! ข้อมูลถูกกรอกแล้วครับ");
+                    setTimeout(() => { statusDiv.style.display = 'none'; }, 5000);
+                } else {
+                    throw new Error(result.message || "AI ไม่ส่งข้อมูลกลับมา");
+                }
+
+            } catch (err) {
+                console.error(">>> [DOCX] Error:", err);
+                let errMsg = err.message;
+                if (errMsg === 'Failed to fetch') {
+                    errMsg = "Failed to fetch (ขัดข้องทางการเชื่อมต่อ - โปรดลองปิด Ad-blocker หรือตรวจสอบการ Deploy อีกครั้ง)";
+                }
+                showStatus("🔴 " + errMsg, true);
+
+                // --- ปุ่มพิเศษสำหรับเทสการกรอกข้อมูล (Mock Data) ---
+                const mockBtn = document.createElement('button');
+                mockBtn.innerText = "⚡ เทสการกรอกข้อมูล (จำลอง)";
+                mockBtn.style.cssText = "display:block; margin: 10px auto; padding: 8px 15px; background:#444; color:white; border-radius:5px; cursor:pointer; font-weight:bold;";
+                mockBtn.onclick = (e) => {
+                    e.preventDefault();
+                    fillFormFields({
+                        title: "ก่อสร้างถนนคอนกรีตเสริมเหล็ก สายทางบ้านแดง",
+                        budget: "500000",
+                        desc: "กว้าง 4 เมตร ยาว 100 เมตร หนา 0.15 เมตร",
+                        type: "concrete",
+                        budgetSource: "งบข้อบัญญัติ",
+                        contractor: "บริษัท ตัวอย่าง จำกัด"
+                    });
+                    showStatus("✅ ทดสอบกรอกข้อมูลจำลองสำเร็จ! (ตรวจสอบที่ฟิลด์ต่างๆ ได้เลยครับ)");
+                };
+                statusDiv.appendChild(mockBtn);
+
+                // Add a small button or link to test connection
+                const testBtn = document.createElement('button');
+                testBtn.innerText = "กดเพื่อทดสอบสัญญาณ";
+                testBtn.style.cssText = "display:block; margin: 10px auto; padding: 5px 10px; font-size: 0.8rem; cursor:pointer;";
+                testBtn.onclick = (e) => { e.preventDefault(); testConnection(); };
+                statusDiv.appendChild(testBtn);
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                input.value = "";
+            }
+        }
+
+        // Helper: File to Base64
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = error => reject(error);
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Helper: Fill form fields
+        function fillFormFields(d) {
+            const setVal = (id, val) => {
+                const el = document.getElementById(id);
+                if (el) {
+                    let value = val || "";
+                    // Clean budget if it's the budget field to support input type="number"
+                    if (id === 'f-budget' && typeof value === 'string') {
+                        value = value.replace(/,/g, '');
+                    }
+                    el.value = value;
+                }
+            };
+            setVal('f-title', d.title);
+            setVal('f-desc', d.desc);
+            setVal('f-budget', d.budget);
+            setVal('f-type', d.type);
+            setVal('f-budget-source', d.budgetSource);
+            setVal('f-order-no', d.orderNo);
+            setVal('f-order-date', d.orderDate);
+            setVal('f-contract-no', d.contractNo);
+            setVal('f-sign-date', d.signDate);
+            setVal('f-end', d.end);
+            setVal('f-duration', d.duration);
+            setVal('f-start', d.start);
+            setVal('f-delivery-date', d.deliveryDate);
+            setVal('f-inspection-date', d.inspectionDate);
+            setVal('f-contractor', d.contractor);
+            setVal('f-supervisor', d.supervisor);
+            setVal('f-comm1', d.comm1);
+            setVal('f-comm2', d.comm2);
+            setVal('f-comm3', d.comm3);
+        }
 
         // --- NEW: Handle Image Upload with Resizing ---
         async function handleImageUpload(input) {
@@ -1110,46 +1332,41 @@
 
             const btn = document.getElementById('rescanBtn');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังย่อรูปและวิเคราะห์...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> วิเคราะห์...';
             btn.disabled = true;
 
             try {
-                // 1. Resize Image (Max 800px width) to avoid timeouts
+                // 1. Resize Image
                 const resizedBase64 = await resizeImage(file, 800);
 
-                // 2. Send to GAS
-                const response = await fetch(API_URL, {
+                // 2. Send to GAS (Using the stable Drive flow too)
+                const uploadRes = await fetch(API_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ action: 'parse_image', image: resizedBase64 })
+                    body: JSON.stringify({
+                        action: 'upload_to_drive',
+                        fileName: 'ai_scan_' + new Date().getTime() + '.jpg',
+                        mimeType: 'image/jpeg',
+                        data: resizedBase64.split(',')[1]
+                    })
                 });
 
-                if (!response.ok) throw new Error(`Server Error (${response.status})`);
+                const uploadResult = await uploadRes.json();
+                if (uploadResult.status !== 'success') throw new Error(uploadResult.message);
 
-                const result = await response.json();
+                const parseRes = await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'parse_image_from_drive',
+                        imageUrl: uploadResult.url
+                    })
+                });
+
+                if (!parseRes.ok) throw new Error(`Server Error (${parseRes.status})`);
+                const result = await parseRes.json();
 
                 if (result.status === 'success' && result.data) {
-                    const d = result.data;
-                    const setVal = (id, val) => { if (document.getElementById(id)) document.getElementById(id).value = val || ""; };
-
-                    setVal('f-title', d.title);
-                    setVal('f-desc', d.desc);
-                    setVal('f-budget', d.budget);
-                    setVal('f-order-no', d.orderNo);
-                    setVal('f-order-date', d.orderDate);
-                    setVal('f-contract-no', d.contractNo);
-                    setVal('f-sign-date', d.signDate);
-                    setVal('f-end', d.end);
-                    setVal('f-duration', d.duration);
-                    setVal('f-start', d.start);
-                    setVal('f-delivery-date', d.deliveryDate);
-                    setVal('f-inspection-date', d.inspectionDate);
-                    setVal('f-contractor', d.contractor);
-                    setVal('f-supervisor', d.supervisor);
-                    setVal('f-comm1', d.comm1);
-                    setVal('f-comm2', d.comm2);
-                    setVal('f-comm3', d.comm3);
-
-                    alert('✨ วิเคราะห์เสร็จสิ้น! ข้อมูลถูกกรอกแล้วครับ');
+                    fillFormFields(result.data);
+                    alert('✨ วิเคราะห์รูปภาพเสร็จสิ้น! ข้อมูลถูกกรอกแล้วครับ');
                 } else {
                     throw new Error(result.message || "ไม่สามารถอ่านข้อมูลได้");
                 }
@@ -1226,6 +1443,9 @@
 
         // --- 2. INITIALIZATION & CACHING ---
         async function init() {
+            console.log(">>> [INIT] Starting initialization...");
+            const projectList = document.getElementById('projectList');
+
             // 1. ลองโหลดจาก Cache ก่อน (ถ้ามี) เพื่อความรวดเร็วแบบ 0 วินาที
             const cache = localStorage.getItem('projects_cache');
             if (cache) {
@@ -1234,38 +1454,67 @@
                     processMainData(result);
                     // ถ้ามีแคชแล้ว ให้ซ่อน loader ไปก่อนเลยเพื่อให้เห็นข้อมูลทันที
                     document.getElementById('loader').style.display = 'none';
-                    console.log('Loaded from LocalStorage cache');
+                    console.log('>>> [INIT] Loaded from LocalStorage cache');
                 } catch (e) {
-                    console.error('Cache parse error', e);
+                    console.error('>>> [INIT] Cache parse error', e);
                 }
             } else {
                 // ถ้าไม่มีแคชเลย ค่อยโชว์ loader แบบเต็มรูปแบบ
                 document.getElementById('loader').style.display = 'flex';
+                // ล้างพื้นที่เผื่อมีข้อความเดิม
+                if (projectList) projectList.innerHTML = '<div style="text-align:center; padding:50px; color:#666;">กำลังดึงข้อมูลโครงการ...</div>';
             }
 
             // 2. ดึงข้อมูลใหม่จาก Server ในพื้นหลัง
             try {
-                const response = await fetch(API_URL + '?t=' + new Date().getTime());
+                console.log(">>> [INIT] Fetching from API:", API_URL);
+                const response = await fetch(API_URL + '?t=' + new Date().getTime(), {
+                    method: 'GET',
+                    mode: 'cors',
+                    credentials: 'omit'
+                });
+
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
                 const result = await response.json();
 
                 if (result.status === 'success' && result.projects) {
+                    console.log(">>> [INIT] Fetch success, projects:", result.projects.length);
                     // เก็บข้อมูลลง Cache สำหรับครั้งหน้า
                     localStorage.setItem('projects_cache', JSON.stringify(result));
-
                     // ประมวลผลและแสดงผลข้อมูลล่าสุด
                     processMainData(result);
                 } else if (result.status === 'error') {
                     throw new Error(result.message);
+                } else {
+                    throw new Error("Invalid response format");
                 }
 
                 document.getElementById('loader').style.display = 'none';
             } catch (err) {
-                console.error('Fetch error:', err);
-                // ถ้าดึงข้อมูลไม่ได้ และไม่มีแคชเลย ค่อยแจ้งเตือน
-                if (!localStorage.getItem('projects_cache')) {
-                    alert('โหลดข้อมูลไม่สำเร็จ: ' + err.message);
-                }
+                console.error('>>> [INIT] Fetch error:', err);
                 document.getElementById('loader').style.display = 'none';
+
+                // ถ้าดึงข้อมูลไม่ได้ และไม่มีแคชเลย ให้แสดงข้อความแจ้งเตือนที่หน้าเว็บ
+                if (!localStorage.getItem('projects_cache')) {
+                    if (projectList) {
+                        projectList.innerHTML = `
+                            <div style="text-align:center; padding:50px; color:#c62828; background:#ffebee; margin:20px; border-radius:12px; border:1px solid #ffcdd2;">
+                                <i class="fas fa-exclamation-triangle" style="font-size:2rem; margin-bottom:15px;"></i>
+                                <h3>เชื่อมต่อข้อมูลไม่ได้</h3>
+                                <p style="margin-bottom:20px;">${err.message === 'Failed to fetch' ? 'ถูกบล็อกการเชื่อมต่อ (อาจเกิดจาก Ad-blocker หรือ Browser บล็อก CORS)' : err.message}</p>
+                                <button onclick="location.reload()" style="padding:10px 20px; border-radius:30px; border:none; background:var(--md-sys-color-primary); color:white; cursor:pointer; font-family:inherit;">
+                                    <i class="fas fa-sync"></i> ลองใหม่อีกครั้ง
+                                </button>
+                                <div style="margin-top:20px; font-size:0.85rem; color:#666; text-align:left; background:white; padding:15px; border-radius:8px;">
+                                    <strong>วิธีแก้เบื้องต้น:</strong><br>
+                                    1. ลองเปิดใน <b>Chrome (หน้าต่างปกติ)</b> ไม่ใช่ Preview ในโปรแกรม<br>
+                                    2. ปิด <b>Ad-blocker</b> หรือ VPN<br>
+                                    3. หากเปิดไฟล์แบบดับเบิลคลิก (file://) อาจถูกเบราว์เซอร์บล็อก แนะนำให้ลองอัปโหลดขึ้น GitHub แล้วเปิดผ่าน GitHub Pages ครับ
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
             }
         }
 

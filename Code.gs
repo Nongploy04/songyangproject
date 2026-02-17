@@ -1,5 +1,14 @@
-// Google Apps Script Backend with Drive Integration
+// Google Apps Script Backend with Drive Integration (Version: v27)
 // This file should be uploaded to Google Apps Script
+/**
+ * @OnlyCurrentDoc
+ */
+// หากเกิดปัญหา "Failed to fetch":
+// ใน appsscript.json ต้องตั้งค่า "access": "ANYONE" และ "executeAs": "USER_DEPLOYING"
+// "webapp": {
+//   "executeAs": "USER_DEPLOYING",
+//   "access": "ANYONE"
+// }
 
 const SHEET_ID = '1qi2WNGDguZtkEtCU2FzzEF_jiVLN82yf23Hbv2H2weA';
 const DRIVE_FOLDER_ID = '1ODlt5J0QLtmUQwzxte2_5n5BWy8Xefky'; // Project Images folder (Public)
@@ -61,7 +70,9 @@ function doPost(e) {
     const payload = JSON.parse(e.postData.contents);
     const action = payload.action;
     
-    if (action === 'upload_to_drive') {
+    if (action === 'ping') {
+      return ContentService.createTextOutput(JSON.stringify({ status: 'success', message: 'Pong!' })).setMimeType(ContentService.MimeType.JSON);
+    } else if (action === 'upload_to_drive') {
       return uploadToDrive(payload);
     } else if (action === 'parse_image_from_drive') {
       return parseImageFromDrive(payload);
@@ -119,7 +130,7 @@ function uploadToDrive(payload) {
   }
 }
 
-// Parse image from Drive URL using Gemini AI
+// Parse image or document from Drive URL using Gemini AI
 function parseImageFromDrive(payload) {
   try {
     const { imageUrl } = payload;
@@ -133,19 +144,26 @@ function parseImageFromDrive(payload) {
     const fileId = fileIdMatch[1];
     const file = DriveApp.getFileById(fileId);
     const blob = file.getBlob();
+    const mimeType = blob.getContentType();
     
     // Convert to base64 for Gemini API
-    const base64Image = Utilities.base64Encode(blob.getBytes());
+    const base64Data = Utilities.base64Encode(blob.getBytes());
     
     // Call Gemini AI API
     const apiKey = 'AIzaSyCXsiVKskwitWyIwFmdemqAV5Wamas7kfQ'; // Gemini API key
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     
-    const prompt = `วิเคราะห์รูปภาพนี้และดึงข้อมูลโครงการก่อสร้างออกมาในรูปแบบ JSON โดยมีฟิลด์ดังนี้:
+    const prompt = `วิเคราะห์ไฟล์แนบนี้ (รูปภาพหรือเอกสารราชการ) และดึงข้อมูลโครงการก่อสร้างออกมาในรูปแบบ JSON โดยมีเงื่อนไขสำคัญดังนี้:
+1. "title": ดึงชื่อโครงการออกมาโดย **ห้ามมีคำว่า "โครงการ" นำหน้า** (เช่น ถ้าในเอกสารเขียนว่า "โครงการก่อสร้างถนน..." ให้ดึงมาแค่ "ก่อสร้างถนน...")
+2. "budget": ให้ดึงค่า **"ราคากลาง"** มาใช้เป็นลำดับแรก หากไม่มีให้ใช้งบประมาณตามข้อบัญญัติ (ส่งกลับเฉพาะตัวเลขเท่านั้น)
+3. "desc": รายละเอียด/ปริมาณงาน
+4. ฟิลด์อื่นๆ ให้ดึงตามที่ระบุในรูปแบบ JSON ข้างล่างนี้:
 {
-  "title": "ชื่อโครงการ",
+  "title": "ชื่อโครงการ (ไม่มีคำว่าโครงการนำหน้า)",
+  "type": "ประเภทโครงการ (เลือกจาก: asphalt, concrete, gravel, soil, building)",
   "desc": "รายละเอียด/ปริมาณงาน",
-  "budget": "งบประมาณ (ตัวเลขเท่านั้น)",
+  "budget": "งบประมาณ (ตัวเลขเท่านั้น ห้ามมีเครื่องหมายคอมมา)",
+  "budgetSource": "แหล่งเงิน (เลือกจาก: งบข้อบัญญัติ, จ่ายขาดเงินสะสม, เงินอุดหนุนเฉพาะกิจ, เงินอุดหนุนจากหน่วยงานอื่น (อบจ.), เงินกันไว้เบิกเหลื่อมปี)",
   "orderNo": "เลขที่คำสั่ง",
   "orderDate": "วันที่ลงนาม (คำสั่ง) รูปแบบ yyyy-mm-dd",
   "contractNo": "เลขที่สัญญา",
@@ -170,8 +188,8 @@ function parseImageFromDrive(payload) {
           { text: prompt },
           {
             inline_data: {
-              mime_type: blob.getContentType(),
-              data: base64Image
+              mime_type: mimeType,
+              data: base64Data
             }
           }
         ]
@@ -190,7 +208,6 @@ function parseImageFromDrive(payload) {
     
     if (result.candidates && result.candidates[0]) {
       const text = result.candidates[0].content.parts[0].text;
-      // Extract JSON from response (remove markdown code blocks if present)
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const data = JSON.parse(jsonMatch[0]);
