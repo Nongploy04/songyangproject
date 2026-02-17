@@ -1160,12 +1160,13 @@
             } catch (err) {
                 console.error(">>> [TEST] Connection Info:", err);
                 statusDiv.innerHTML = `❌ <b>วิเคราะห์แล้ว: การเชื่อมต่อถูกบล็อก</b><br>
-                ลิงก์ที่ใช้: <small>${API_URL}</small><br>
+                ลิงก์ที่ใช้: <a href="${API_URL}" target="_blank" style="color:blue; text-decoration:underline;">คลิกเพื่อทดสอบลิงก์นี้ตรงๆ</a><br>
                 ข้อผิดพลาด: ${err.message}<br><br>
                 <b>วิธีแก้โปรดทำตามนี้ทีละข้อ:</b><br>
-                1. ลองเปิดเว็บด้วย <b>โหมดไม่ระบุตัวตน (Incognito)</b><br>
-                2. ปิด <b>Ad-blocker</b> หรือ VPN (ถ้ามี)<br>
-                3. ลองคัดลอกลิงก์ API ข้างบนไปเปิดในแท็บใหม่ ถ้าเปิดไม่ได้เลย แสดงว่าตอน Deploy คุณไม่ได้เลือก <b>"Anyone"</b> ครับ`;
+                1. <b>กดลิงก์สีน้ำเงินข้างบน</b> ถ้าขึ้น JSON แสดงว่าเน็ตปกติ แต่เบราว์เซอร์บล็อกหน้าเว็บนี้ครับ<br>
+                2. ลองเปิดเว็บด้วย <b>โหมดไม่ระบุตัวตน (Incognito)</b><br>
+                3. ปิด Ad-blocker หรือ VPN (ถ้ามี)<br>
+                4. <button onclick="localStorage.clear(); location.reload();" style="padding:5px 10px; margin-top:10px; cursor:pointer;">ล้างแคชและโหลดหน้าใหม่</button>`;
 
                 statusDiv.style.background = "#ffebee";
                 statusDiv.style.color = "#c62828";
@@ -1465,8 +1466,8 @@
             // 2. ดึงข้อมูลใหม่จาก Server ในพื้นหลัง
             try {
                 console.log(">>> [INIT] Fetching from API:", API_URL);
-                // ใช้ fetch แบบเรียบง่ายที่สุดเพื่อให้เบราว์เซอร์จัดการขั้นตอนอื่นเอง
-                const response = await fetch(API_URL);
+                // ใช้ Simple GET เพื่อหลีกเลี่ยง CORS เคร่งครัดในบางเบราว์เซอร์
+                const response = await fetch(API_URL, { mode: 'cors' });
 
                 if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
                 const result = await response.json();
