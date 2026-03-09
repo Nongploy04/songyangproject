@@ -1319,6 +1319,34 @@
             setVal('f-comm3', d.comm3);
         }
 
+        // --- NEW: Calculate Duration Automatically ---
+        function calculateAndSetDuration() {
+            const startInput = document.getElementById('f-sign-date').value;
+            const endInput = document.getElementById('f-end').value;
+            const durationInput = document.getElementById('f-duration');
+
+            if (startInput && endInput) {
+                const startDate = new Date(startInput);
+                const endDate = new Date(endInput);
+
+                // ตรวจสอบว่าเป็นวันที่ถูกต้องหรือไม่
+                if (!isNaN(startDate.getTime()) && !isNaN(endDate.getTime())) {
+                    // คำนวณส่วนต่างมิลลิวินาที แล้วแปลงเป็นวัน
+                    const diffTime = endDate.getTime() - startDate.getTime();
+                    // บวก 1 เพื่อให้นับรวมทั้งวันเริ่มต้นและวันสุดท้ายตามหลักสัญญา
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+                    if (diffDays >= 0) {
+                        durationInput.value = diffDays;
+                    } else {
+                        durationInput.value = ""; // กรณีวันที่สิ้นสุดมาก่อนวันที่เริ่ม
+                    }
+                }
+            } else {
+                durationInput.value = ""; // เคลียร์ค่าถ้ากรอกไม่ครบ
+            }
+        }
+
         // --- NEW: Handle Image Upload with Resizing ---
         async function handleImageUpload(input) {
             const file = input.files[0];
@@ -2188,6 +2216,19 @@
                 document.body.appendChild(script);
             });
         }
+
+        // ผูก Event Listener ทันทีที่โหลดหน้าเสร็จ
+        document.addEventListener('DOMContentLoaded', () => {
+            const signDateInput = document.getElementById('f-sign-date');
+            const endDateInput = document.getElementById('f-end');
+
+            if (signDateInput && endDateInput) {
+                signDateInput.addEventListener('input', calculateAndSetDuration);
+                endDateInput.addEventListener('input', calculateAndSetDuration);
+                signDateInput.addEventListener('change', calculateAndSetDuration);
+                endDateInput.addEventListener('change', calculateAndSetDuration);
+            }
+        });
 
         init();
     </script>
