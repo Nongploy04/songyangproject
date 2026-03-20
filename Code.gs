@@ -383,7 +383,9 @@ function updateProject(payload) {
         const currentRowTitle = sheet.getRange(rowIndex, titleIndex + 1).getValue();
         if (currentRowTitle !== payload.originalTitle) {
           // Changed! Search for it...
-          const allTitles = sheet.getRange(2, titleIndex + 1, sheet.getLastRow() - 1, 1).getValues();
+          const lastR = sheet.getLastRow();
+          if (lastR <= 1) throw new Error("ตารางข้อมูลว่างเปล่า ข้อมูลโครงการ " + payload.originalTitle + " ถูกลบไปแล้ว กรุณารีเฟรช");
+          const allTitles = sheet.getRange(2, titleIndex + 1, lastR - 1, 1).getValues();
           const foundIdx = allTitles.findIndex(t => t[0] == payload.originalTitle);
           if (foundIdx === -1) {
             throw new Error("ข้อมูลโครงการ " + payload.originalTitle + " ถูกย้ายหรือลบไปแล้ว กรุณารีเฟรชเพื่อโหลดข้อมูลใหม่");
@@ -447,7 +449,9 @@ function deleteProject(payload) {
       if (titleIndex !== -1) {
         const currentRowTitle = sheet.getRange(rowIndex, titleIndex + 1).getValue();
         if (currentRowTitle !== payload.originalTitle) {
-          const allTitles = sheet.getRange(2, titleIndex + 1, sheet.getLastRow() - 1, 1).getValues();
+          const lastR = sheet.getLastRow();
+          if (lastR <= 1) throw new Error("ตารางข้อมูลว่างเปล่า ข้อมูลโครงการ " + payload.originalTitle + " ถูกลบไปแล้ว กรุณารีเฟรช");
+          const allTitles = sheet.getRange(2, titleIndex + 1, lastR - 1, 1).getValues();
           const foundIdx = allTitles.findIndex(t => t[0] == payload.originalTitle);
           if (foundIdx === -1) {
             throw new Error("ข้อมูลโครงการ " + payload.originalTitle + " ถูกลบไปก่อนแล้ว กรุณารีเฟรช");
