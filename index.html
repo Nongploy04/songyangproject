@@ -1296,7 +1296,7 @@
 
         // --- NEW: Calculate Duration Automatically ---
         function calculateAndSetDuration() {
-            const startInput = document.getElementById('f-sign-date').value;
+            const startInput = document.getElementById('f-start').value;
             const endInput = document.getElementById('f-end').value;
             const durationInput = document.getElementById('f-duration');
 
@@ -2112,13 +2112,13 @@
 
         // ผูก Event Listener ทันทีที่โหลดหน้าเสร็จ
         document.addEventListener('DOMContentLoaded', () => {
-            const signDateInput = document.getElementById('f-sign-date');
+            const startDateInput = document.getElementById('f-start');
             const endDateInput = document.getElementById('f-end');
 
-            if (signDateInput && endDateInput) {
-                signDateInput.addEventListener('input', calculateAndSetDuration);
+            if (startDateInput && endDateInput) {
+                startDateInput.addEventListener('input', calculateAndSetDuration);
                 endDateInput.addEventListener('input', calculateAndSetDuration);
-                signDateInput.addEventListener('change', calculateAndSetDuration);
+                startDateInput.addEventListener('change', calculateAndSetDuration);
                 endDateInput.addEventListener('change', calculateAndSetDuration);
             }
         });
