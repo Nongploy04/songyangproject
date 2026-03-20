@@ -1519,6 +1519,7 @@
                 <div class="card-title">${p.title}</div>
                 <div class="header-actions">
                     <button class="admin-icon-btn edit-action" onclick="openFormModal('edit', '${p.id}'); event.stopPropagation();">edit</button>
+                    ${progress === 100 && p.statusText === 'กำลังดำเนินการ' ? `<button class="admin-icon-btn deliver-action" style="color: #4CAF50;" onclick="deliverProject('${p.id}'); event.stopPropagation();" title="ส่งมอบงาน">check_circle</button>` : ''}
                     <button class="admin-icon-btn delete-action" onclick="deleteProject('${p.id}'); event.stopPropagation();">delete</button>
                     <span class="status-badge ${p.statusText === 'รอดำเนินการ' ? 'badge-pending' : (p.status === 'active' ? 'badge-active' : 'badge-done')}">${p.statusText}</span>
                 </div>
@@ -1630,6 +1631,31 @@
                 init();
             } catch (err) {
                 alert('ลบไม่สำเร็จ: ' + err);
+                document.getElementById('loader').style.display = 'none';
+            }
+        }
+
+        async function deliverProject(id) {
+            if (!confirm('ยืนยันการส่งมอบงานสำหรับโครงการนี้? (สถานะจะเปลี่ยนเป็น ส่งมอบงาน ทันที)')) return;
+
+            try {
+                document.getElementById('loader').style.display = 'flex';
+                const payload = {
+                    action: 'update',
+                    id: id,
+                    data: { "Status": "ส่งมอบงาน" }
+                };
+                
+                await fetch(API_URL, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                });
+                
+                alert('บันทึกการส่งมอบงานเรียบร้อย');
+                localStorage.removeItem('projects_cache'); // ล้างแคชเพื่อให้โหลดใหม่ทันที
+                init();
+            } catch (err) {
+                alert('เกิดข้อผิดพลาด: ' + err);
                 document.getElementById('loader').style.display = 'none';
             }
         }
