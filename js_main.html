@@ -296,7 +296,7 @@
                 <div class="card-title">${p.title}</div>
                 <div class="header-actions">
                     <button class="admin-icon-btn edit-action" onclick="openFormModal('edit', '${p.id}'); event.stopPropagation();">edit</button>
-                    ${progress === 100 && p.statusText === 'กำลังดำเนินการ' ? `<button class="admin-icon-btn deliver-action" style="color: #4CAF50;" onclick="deliverProject('${p.id}'); event.stopPropagation();" title="ส่งมอบงาน">check_circle</button>` : ''}
+                    ${p.statusText === 'กำลังดำเนินการ' ? `<button class="admin-icon-btn deliver-action" style="color: #4CAF50;" onclick="deliverProject('${p.id}'); event.stopPropagation();" title="ส่งมอบงาน">check_circle</button>` : ''}
                     <button class="admin-icon-btn delete-action" onclick="deleteProject('${p.id}'); event.stopPropagation();">delete</button>
                     <span class="status-badge ${p.statusText === 'รอดำเนินการ' ? 'badge-pending' : (p.status === 'active' ? 'badge-active' : 'badge-done')}">${p.statusText}</span>
                 </div>
