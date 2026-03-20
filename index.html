@@ -1596,6 +1596,7 @@
             const payload = {
                 action: isEdit ? 'update' : 'create',
                 id: id,
+                originalTitle: isEdit ? projects.find(x => x.id == id).title : "",
                 data: newData
             };
 
@@ -1618,13 +1619,14 @@
         }
 
         async function deleteProject(id) {
+            const p = projects.find(x => x.id == id);
             if (!confirm('ยืนยันที่จะลบโครงการนี้?')) return;
 
             try {
                 document.getElementById('loader').style.display = 'flex';
                 await fetch(API_URL, {
                     method: 'POST',
-                    body: JSON.stringify({ action: 'delete', id: id })
+                    body: JSON.stringify({ action: 'delete', id: id, originalTitle: p ? p.title : "" })
                 });
                 alert('ลบข้อมูลเรียบร้อย');
                 localStorage.removeItem('projects_cache'); // ล้างแคชเพื่อให้โหลดใหม่ทันที
@@ -1636,6 +1638,7 @@
         }
 
         async function deliverProject(id) {
+            const p = projects.find(x => x.id == id);
             if (!confirm('ยืนยันการส่งมอบงานสำหรับโครงการนี้? (สถานะจะเปลี่ยนเป็น ส่งมอบงาน ทันที)')) return;
 
             try {
@@ -1643,6 +1646,7 @@
                 const payload = {
                     action: 'update',
                     id: id,
+                    originalTitle: p ? p.title : "",
                     data: { "Status": "ส่งมอบงาน" }
                 };
                 

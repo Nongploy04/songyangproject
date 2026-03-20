@@ -127,7 +127,7 @@ function uploadAndParse(payload) {
     
     // 2. Call Gemini AI (using the blob/data directly to save time)
     const base64Data = data; // use the already base64 data
-    const apiKey = 'AIzaSyCXsiVKskwitWyIwFmdemqAV5Wamas7kfQ';
+    const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || 'AIzaSyCXsiVKskwitWyIwFmdemqAV5Wamas7kfQ';
     const apiURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     
     const prompt = `วิเคราะห์ไฟล์แนบนี้ (รูปภาพหรือเอกสารราชการ) และดึงข้อมูลโครงการก่อสร้างออกมาในรูปแบบ JSON โดยมีเงื่อนไขสำคัญดังนี้:
@@ -224,7 +224,7 @@ function parseImageFromDrive(payload) {
     const base64Data = Utilities.base64Encode(blob.getBytes());
     
     // Call Gemini AI API
-    const apiKey = 'AIzaSyCXsiVKskwitWyIwFmdemqAV5Wamas7kfQ'; // Gemini API key
+    const apiKey = PropertiesService.getScriptProperties().getProperty('GEMINI_API_KEY') || 'AIzaSyCXsiVKskwitWyIwFmdemqAV5Wamas7kfQ'; // Gemini API key
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
     
     const prompt = `วิเคราะห์ไฟล์แนบนี้ (รูปภาพหรือเอกสารราชการ) และดึงข้อมูลโครงการก่อสร้างออกมาในรูปแบบ JSON โดยมีเงื่อนไขสำคัญดังนี้:
@@ -363,7 +363,7 @@ function updateProject(payload) {
 
   try {
     const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Sheet1');
-    const lastCol = sheet.getLastColumn();
+    let lastCol = sheet.getLastColumn();
     const headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
     
     // Safety check: If "Project Type" column is missing, add it
@@ -373,7 +373,25 @@ function updateProject(payload) {
       // Re-read lastCol since we added one
       lastCol = sheet.getLastColumn();
     }
-    const rowIndex = parseInt(payload.id);
+    
+    let rowIndex = parseInt(payload.id);
+    
+    // Concurrency Check: If originalTitle is provided, verify it matches
+    if (payload.originalTitle) {
+      const titleIndex = headers.indexOf("Project Name");
+      if (titleIndex !== -1) {
+        const currentRowTitle = sheet.getRange(rowIndex, titleIndex + 1).getValue();
+        if (currentRowTitle !== payload.originalTitle) {
+          // Changed! Search for it...
+          const allTitles = sheet.getRange(2, titleIndex + 1, sheet.getLastRow() - 1, 1).getValues();
+          const foundIdx = allTitles.findIndex(t => t[0] == payload.originalTitle);
+          if (foundIdx === -1) {
+            throw new Error("ข้อมูลโครงการ " + payload.originalTitle + " ถูกย้ายหรือลบไปแล้ว กรุณารีเฟรชเพื่อโหลดข้อมูลใหม่");
+          }
+          rowIndex = foundIdx + 2;
+        }
+      }
+    }
     
     // Optimize: Read entire row, update in memory, write back once
     const range = sheet.getRange(rowIndex, 1, 1, lastCol);
@@ -420,7 +438,25 @@ function deleteProject(payload) {
 
   try {
     const sheet = SpreadsheetApp.openById(SHEET_ID).getSheetByName('Sheet1');
-    const rowIndex = parseInt(payload.id);
+    let rowIndex = parseInt(payload.id);
+    
+    // Concurrency Check
+    if (payload.originalTitle) {
+      const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      const titleIndex = headers.indexOf("Project Name");
+      if (titleIndex !== -1) {
+        const currentRowTitle = sheet.getRange(rowIndex, titleIndex + 1).getValue();
+        if (currentRowTitle !== payload.originalTitle) {
+          const allTitles = sheet.getRange(2, titleIndex + 1, sheet.getLastRow() - 1, 1).getValues();
+          const foundIdx = allTitles.findIndex(t => t[0] == payload.originalTitle);
+          if (foundIdx === -1) {
+            throw new Error("ข้อมูลโครงการ " + payload.originalTitle + " ถูกลบไปก่อนแล้ว กรุณารีเฟรช");
+          }
+          rowIndex = foundIdx + 2;
+        }
+      }
+    }
+    
     sheet.deleteRow(rowIndex);
     CacheService.getScriptCache().remove('projectData'); // ล้างแคช
     
