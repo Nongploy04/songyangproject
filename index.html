@@ -1503,7 +1503,13 @@
                 if (p.status === 'active') countActive++;
 
                 if (filterType === 'active' && p.status !== 'active') return;
-                if (searchTerm !== "" && !p.title.toLowerCase().includes(searchTerm)) return;
+
+                if (searchTerm !== "") {
+                    // ค้นหาจาก ชื่อโครงการ, ผู้รับจ้าง, ผู้ควบคุมงาน, คณะกรรมการ, เลขที่สัญญา, เลขที่คำสั่ง
+                    const committeeStr = Array.isArray(p.committee) ? p.committee.join(" ") : (p.committee || "");
+                    const searchText = `${p.title} ${p.contractor} ${p.supervisor} ${committeeStr} ${p.contractNo} ${p.orderNo}`.toLowerCase();
+                    if (!searchText.includes(searchTerm)) return;
+                }
 
                 // Chip Filter: ใช้ค่า type จากคอลัมน์จริง
                 if (currentChipFilter !== 'all') {
